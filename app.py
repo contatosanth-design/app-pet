@@ -8,11 +8,30 @@ st.markdown("---")
 tab1, tab2 = st.tabs(["👤 Clientes", "🐶 Pets"])
 
 with tab1:
-    st.header("Cadastrar Cliente")
-    nome = st.text_input("Nome do Dono")
-    tel = st.text_input("WhatsApp")
-    if st.button("Salvar Cliente"):
-        st.success(f"Cliente {nome} salvo com sucesso!")
+    with tab1:
+        st.header("👤 Cadastrar Cliente")
+        with st.form("form_cliente"):
+            nome_dono = st.text_input("Nome do Dono")
+            cpf = st.text_input("CPF (apenas números)")
+            email = st.text_input("E-mail")
+            whatsapp = st.text_input("WhatsApp (com DDD)")
+            
+            # Parte de Endereço
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                cep = st.text_input("CEP")
+            with col2:
+                endereco = st.text_input("Endereço Completo (Rua, Número, Bairro)")
+            
+            submit_cliente = st.form_submit_button("Salvar Cliente")
+            
+            if submit_cliente:
+                if nome_dono and whatsapp:
+                    # Aqui você pode adicionar a lógica para salvar no banco de dados
+                    st.success(f"✅ Cliente {nome_dono} cadastrado com sucesso!")
+                    st.balloons()
+                else:
+                    st.error("⚠️ Por favor, preencha pelo menos Nome e WhatsApp.")
 
 with tab2:
     st.header("Cadastrar Pet")
