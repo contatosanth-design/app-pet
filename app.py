@@ -5,16 +5,13 @@ from datetime import datetime
 # Configuração da Página
 st.set_page_config(page_title="Veterinário da Ribeira", layout="wide")
 
-# --- CSS PARA DESIGN TÉCNICO E FONTES COMPACTAS ---
+# --- CSS PARA DESIGN TÉCNICO ---
 st.markdown("""
     <style>
-    html, body, [class*="css"] { font-size: 13px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    html, body, [class*="css"] { font-size: 13px; }
     .main { background-color: #f0f2f6; }
-    .stButton>button { border-radius: 5px; height: 2.5em; background-color: #2e7bcf; color: white; }
-    h1 { color: #1e3d59; font-size: 20px !important; margin-bottom: 10px; }
-    .stMetric { background-color: white; padding: 10px; border-radius: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); }
-    /* Estilo Planilha */
-    .dataframe { font-size: 11px !important; }
+    h1 { color: #1e3d59; font-size: 20px !important; }
+    .stButton>button { background-color: #2e7bcf; color: white; width: 100%; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -24,119 +21,92 @@ if 'pets' not in st.session_state: st.session_state['pets'] = []
 if 'proximo_cod_cliente' not in st.session_state: st.session_state['proximo_cod_cliente'] = 1
 if 'proximo_cod_pet' not in st.session_state: st.session_state['proximo_cod_pet'] = 1
 
-# --- BARRA LATERAL (LOGOTIPO E MENU) ---
+# --- BARRA LATERAL ---
 with st.sidebar:
-    # Inserindo seu logotipo Squash_pet
-    st.image("https://raw.githubusercontent.com/contatosanth-design/app-pet/main/Squash_pet%20(1).png", width=150)
+    # Tentativa de carregar o logo do seu GitHub
+    st.image("https://raw.githubusercontent.com/contatosanth-design/app-pet/main/Squash_pet%20(1).png", width=120)
     st.markdown("### 🏥 CONSULTÓRIO DA RIBEIRA")
-    st.caption("Gestão Veterinária Profissional")
     st.divider()
-    menu = st.radio("NAVEGAÇÃO", ["🏠 Início", "👤 Cadastro de Tutores", "🩺 Atendimento / Prontuário", "📋 Banco de Dados (Excel)"])
+    # Nomes simplificados para evitar erros de digitação no código
+    menu = st.radio("NAVEGAÇÃO", ["Início", "Tutores", "Prontuário", "Banco de Dados"])
 
-# --- 🏠 PÁGINA: DASHBOARD ---
-if menu == "🏠 Início":
-    st.title("📊 Resumo do Consultório")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Tutores Cadastrados", len(st.session_state['clientes']))
-    col2.metric("Pacientes (Pets)", len(st.session_state['pets']))
-    col3.metric("Data de Hoje", datetime.now().strftime("%d/%m/%Y"))
+# --- PÁGINA: INÍCIO ---
+if menu == "Início":
+    st.title("📊 Painel de Controle")
+    c1, c2 = st.columns(2)
+    c1.metric("Tutores", len(st.session_state['clientes']))
+    c2.metric("Pacientes", len(st.session_state['pets']))
 
-# --- 👤 PÁGINA: CADASTRO DE TUTORES ---
-elif menu == "👤 Cadastro de Tutores":
-    st.title("📝 Registro de Tutor")
+# --- PÁGINA: TUTORES ---
+elif menu == "Tutores":
+    st.title("👤 Cadastro de Tutores")
     with st.form("form_tutor"):
         c_id = f"{st.session_state['proximo_cod_cliente']:04d}"
-        st.subheader(f"Ficha Nº {c_id}")
-        c1, c2 = st.columns(2)
-        nome = c1.text_input("Nome do Tutor")
-        cpf = c2.text_input("CPF / Identidade")
-        tel = c1.text_input("WhatsApp / Telefone")
-        email = c2.text_input("E-mail para Contato")
-        end = st.text_input("Endereço Completo")
-        
-        if st.form_submit_button("💾 Salvar Registro"):
+        st.info(f"Ficha Cliente Nº {c_id}")
+        nome = st.text_input("Nome do Tutor")
+        tel = st.text_input("WhatsApp")
+        if st.form_submit_button("Salvar Tutor"):
             if nome and tel:
                 st.session_state['clientes'][c_id] = nome
                 st.session_state['proximo_cod_cliente'] += 1
-                st.success(f"Tutor {nome} cadastrado com sucesso!")
-            else: st.error("Nome e Telefone são obrigatórios.")
+                st.success("Cadastrado!")
+            else: st.error("Preencha Nome e WhatsApp")
 
-# --- 🩺 PÁGINA: ATENDIMENTO / PRONTUÁRIO ---
-elif menu == "Atendimento / Prontuário":
-    st.title("🩺 Ficha de Atendimento Clínico")
+# --- PÁGINA: PRONTUÁRIO (Aqui estava o erro!) ---
+elif menu == "Prontuário":
+    st.title("🩺 Ficha de Atendimento / Prontuário")
     if not st.session_state['clientes']:
-        st.warning("⚠️ Cadastre o tutor antes de iniciar o prontuário.")
+        st.warning("⚠️ Cadastre um Tutor primeiro na aba 'Tutores'.")
     else:
         with st.form("form_clinico"):
             p_id = f"{st.session_state['proximo_cod_pet']:04d}"
             
-            # Cabeçalho do Atendimento (Inspirado na sua imagem)
-            col_h1, col_h2 = st.columns([2, 1])
-            opcoes_tutores = [f"{id} - {n}" for id, n in st.session_state['clientes'].items()]
-            tutor_ref = col_h1.selectbox("Dono do Animal / Cliente", opcoes_tutores)
-            data_atend = col_h2.text_input("Data Entrada", datetime.now().strftime("%d/%m/%Y"))
+            # Associação com Tutor
+            lista_t = [f"{id} - {n}" for id, n in st.session_state['clientes'].items()]
+            tutor = st.selectbox("Selecione o Tutor", lista_t)
             
-            st.divider()
+            col1, col2 = st.columns(2)
+            nome_p = col1.text_input("Nome do Animal")
+            especie = col2.selectbox("Espécie", ["Canino", "Felino", "Outros"])
             
-            # Dados do Paciente
-            c1, c2, c3 = st.columns(3)
-            nome_p = c1.text_input("Nome do Animal")
-            especie = c2.selectbox("Espécie", ["Canina", "Felina", "Exóticos", "Outros"])
-            raca = c3.text_input("Raça / SRD")
-            
-            # Análise Clínica (O que você pediu)
-            st.markdown("#### 🌡️ Exame Físico e Sinais Vitais")
-            v1, v2, v3, v4 = st.columns(4)
-            peso = v1.text_input("Peso Atual (kg)")
-            temp = v2.text_input("Temperatura (°C)")
+            st.markdown("---")
+            v1, v2, v3 = st.columns(3)
+            peso = v1.text_input("Peso (kg)")
+            temp = v2.text_input("Temp (°C)")
             cor = v3.text_input("Cor do Pêlo")
-            sexo = v4.selectbox("Sexo", ["Macho", "Fêmea"])
             
-            # Idade Personalizada
-            v_idade = st.number_input("Idade (Valor)", min_value=0)
-            u_idade = st.radio("Unidade", ["Anos", "Meses"], horizontal=True)
+            diag = st.text_area("Diagnóstico / Observações")
+            foto = st.file_uploader("Foto do Paciente", type=['jpg','png','jpeg'])
             
-            # Diagnóstico e Foto
-            diag = st.text_area("Anamnese / Aspectos Gerais / Diagnóstico")
-            foto = st.file_uploader("📷 Foto do Paciente", type=['jpg', 'jpeg', 'png'])
-            
-            if st.form_submit_button("✅ Finalizar e Salvar Prontuário"):
+            if st.form_submit_button("✅ Salvar Atendimento"):
                 if nome_p:
                     st.session_state['pets'].append({
-                        "Cód": p_id, "Tutor": tutor_ref, "Nome": nome_p, "Espécie": especie,
-                        "Raça": raca, "Peso": peso, "Temp": temp, "Cor": cor,
-                        "Idade": f"{v_idade} {u_idade}", "Diagnóstico": diag, "Foto": foto
+                        "Cód": p_id, "Tutor": tutor, "Nome": nome_p, 
+                        "Espécie": especie, "Peso": peso, "Temp": temp, 
+                        "Cor": cor, "Diagnóstico": diag, "Foto": foto
                     })
                     st.session_state['proximo_cod_pet'] += 1
-                    st.success(f"Atendimento de {nome_p} registrado com sucesso!")
-                else: st.error("O nome do animal é obrigatório.")
+                    st.success(f"Prontuário de {nome_p} salvo!")
+                else: st.error("Nome do pet é obrigatório")
 
-# --- 📋 PÁGINA: RELATÓRIO (PLANILHA) ---
-elif menu == "📋 Banco de Dados (Excel)":
-    st.title("📋 Planilha Geral de Atendimentos")
+# --- PÁGINA: BANCO DE DADOS ---
+elif menu == "Banco de Dados":
+    st.title("📋 Planilha de Registros")
     if not st.session_state['pets']:
-        st.info("Nenhum dado registrado para exibição.")
+        st.info("Nenhum prontuário encontrado.")
     else:
-        # Layout de Tabela Compacta
-        st.markdown("---")
-        # Cabeçalho
-        h_cols = st.columns([1, 1, 2, 2, 1, 1, 1, 3, 1])
-        headers = ["FOTO", "CÓD", "PACIENTE", "TUTOR", "RAÇA", "PESO", "TEMP", "DIAGNÓSTICO", "AÇÃO"]
-        for i, h in enumerate(headers): h_cols[i].markdown(f"**{h}**")
+        # Cabeçalho estilo planilha
+        cols = st.columns([1, 2, 2, 1, 1, 1, 3])
+        titulos = ["FOTO", "CÓD", "PET", "TUTOR", "PESO", "TEMP", "DIAGNÓSTICO"]
+        for i, t in enumerate(titulos): cols[i].write(f"**{t}**")
         
-        # Linhas da Planilha
         for p in st.session_state['pets']:
-            row = st.columns([1, 1, 2, 2, 1, 1, 1, 3, 1])
-            
-            # Foto Miniatura
-            if p['Foto']: row[0].image(p['Foto'], width=50)
-            else: row[0].write("🚫")
-            
-            row[1].write(p['Cód'])
-            row[2].write(p['Nome'])
-            row[3].write(p['Tutor'])
-            row[4].write(p['Raça'])
-            row[5].write(p['Peso'])
-            row[6].write(p['Temp'])
-            row[7].write(p['Diagnóstico'][:50] + "..." if len(p['Diagnóstico']) > 50 else p['Diagnóstico'])
-            row[8].button("🔍", key=p['Cód'])
+            r = st.columns([1, 2, 2, 1, 1, 1, 3])
+            if p['Foto']: r[0].image(p['Foto'], width=50)
+            else: r[0].write("🚫")
+            r[1].write(p['Cód'])
+            r[2].write(p['Nome'])
+            r[3].write(p['Tutor'])
+            r[4].write(p['Peso'])
+            r[5].write(p['Temp'])
+            r[6].write(p['Diagnóstico'])
