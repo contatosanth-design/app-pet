@@ -1,92 +1,112 @@
 import streamlit as st
 
-st.set_page_config(page_title="PetControl Profissional", layout="wide")
+# Configuração da Página com visual limpo
+st.set_page_config(page_title="PetControl Pro", layout="wide", initial_sidebar_state="expanded")
 
-st.title("🐾 Sistema PetControl v4.0")
+# --- ESTILO CSS CUSTOMIZADO ---
+st.markdown("""
+    <style>
+    .main { background-color: #f5f7f9; }
+    .stButton>button { width: 100%; border-radius: 20px; background-color: #007bff; color: white; border: none; height: 3em; }
+    .stButton>button:hover { background-color: #0056b3; color: white; }
+    .reportview-container .main .block-container { padding-top: 2rem; }
+    .stHeader { color: #1e3d59; }
+    .card {
+        background-color: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        border-left: 5px solid #007bff;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-# Banco de dados na memória com contadores para códigos crescentes
-if 'clientes' not in st.session_state:
-    st.session_state['clientes'] = {}
-if 'pets' not in st.session_state:
-    st.session_state['pets'] = []
-if 'proximo_cod_cliente' not in st.session_state:
-    st.session_state['proximo_cod_cliente'] = 1
-if 'proximo_cod_pet' not in st.session_state:
-    st.session_state['proximo_cod_pet'] = 1
+# Inicialização do Banco de Dados em Memória
+if 'clientes' not in st.session_state: st.session_state['clientes'] = {}
+if 'pets' not in st.session_state: st.session_state['pets'] = []
+if 'proximo_cod_cliente' not in st.session_state: st.session_state['proximo_cod_cliente'] = 1
+if 'proximo_cod_pet' not in st.session_state: st.session_state['proximo_cod_pet'] = 1
 
-tab1, tab2, tab3 = st.tabs(["👤 Clientes", "🐶 Pets", "📋 Relatório Geral"])
+# --- MENU LATERAL ---
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/194/194279.png", width=100)
+    st.title("PetControl Pro")
+    menu = st.radio("Navegação", ["Dashboard", "Cadastrar Cliente", "Cadastrar Pet", "Relatório Geral"])
+    st.info("Sistema v5.0 - Premium Design")
 
-with tab1:
-    st.header("Cadastrar Cliente")
-    with st.form("form_cliente"):
-        # Código numérico de 4 dígitos (0001, 0002...)
-        cod_cliente_formatado = f"{st.session_state['proximo_cod_cliente']:04d}"
-        st.info(f"Código do Novo Cliente: {cod_cliente_formatado}")
-        
-        nome = st.text_input("Nome Completo")
-        cpf = st.text_input("CPF")
-        email = st.text_input("E-mail")
-        whatsapp = st.text_input("WhatsApp")
-        cep = st.text_input("CEP")
-        endereco = st.text_area("Endereço Completo")
-        
-        if st.form_submit_button("Salvar Cliente"):
-            if nome:
-                st.session_state['clientes'][cod_cliente_formatado] = nome
-                st.session_state['proximo_cod_cliente'] += 1
-                st.success(f"✅ Cliente {nome} salvo com o código {cod_cliente_formatado}!")
-                st.balloons()
-            else:
-                st.error("O nome é obrigatório!")
+# --- PÁGINA: DASHBOARD ---
+if menu == "Dashboard":
+    st.title("📊 Painel de Controle")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total de Clientes", len(st.session_state['clientes']))
+    col2.metric("Total de Pets", len(st.session_state['pets']))
+    col3.metric("Último Cód", f"{st.session_state['proximo_cod_cliente']-1:04d}")
 
-with tab2:
-    st.header("Cadastrar Pet")
+# --- PÁGINA: CADASTRAR CLIENTE ---
+elif menu == "Cadastrar Cliente":
+    st.title("👤 Novo Cliente")
+    cod_cliente = f"{st.session_state['proximo_cod_cliente']:04d}"
+    
+    with st.container():
+        st.markdown(f'<div class="card">Código do Registro: <b>{cod_cliente}</b></div>', unsafe_allow_html=True)
+        with st.form("form_cliente"):
+            col1, col2 = st.columns(2)
+            nome = col1.text_input("Nome Completo")
+            cpf = col2.text_input("CPF")
+            email = col1.text_input("E-mail")
+            whatsapp = col2.text_input("WhatsApp")
+            endereco = st.text_area("Endereço")
+            
+            if st.form_submit_button("Finalizar Cadastro"):
+                if nome:
+                    st.session_state['clientes'][cod_cliente] = nome
+                    st.session_state['proximo_cod_cliente'] += 1
+                    st.success("Cadastro realizado!")
+                    st.balloons()
+                else: st.error("Nome obrigatório")
+
+# --- PÁGINA: CADASTRAR PET ---
+elif menu == "Cadastrar Pet":
+    st.title("🐶 Novo Pet")
     if not st.session_state['clientes']:
-        st.warning("⚠️ Cadastre um cliente primeiro.")
+        st.warning("Cadastre um cliente primeiro.")
     else:
+        cod_pet = f"{st.session_state['proximo_cod_pet']:04d}"
         with st.form("form_pet"):
-            cod_pet_formatado = f"{st.session_state['proximo_cod_pet']:04d}"
-            st.info(f"Código do Pet: {cod_pet_formatado}")
-            
-            opcoes_clientes = [f"{id} - {nome}" for id, nome in st.session_state['clientes'].items()]
-            dono_selecionado = st.selectbox("Quem é o Dono?", opcoes_clientes)
-            
+            opcoes = [f"{id} - {nome}" for id, nome in st.session_state['clientes'].items()]
+            dono = st.selectbox("Selecione o Dono", opcoes)
             nome_pet = st.text_input("Nome do Pet")
             raca = st.text_input("Raça")
             
-            # Opção de Idade em Anos ou Meses
-            col_id1, col_id2 = st.columns([1, 1])
-            with col_id1:
-                valor_idade = st.number_input("Idade (Número)", min_value=0)
-            with col_id2:
-                unidade_idade = st.selectbox("Tempo", ["Ano(s)", "Mês(es)"])
+            col_id1, col_id2 = st.columns(2)
+            idade_v = col_id1.number_input("Idade", min_value=0)
+            idade_u = col_id2.selectbox("Unidade", ["Anos", "Meses"])
             
-            # Campo de Foto
-            foto = st.file_uploader("Clique abaixo para enviar a foto do Pet", type=['png', 'jpg', 'jpeg'])
+            foto = st.file_uploader("Foto do Pet", type=['png','jpg','jpeg'])
             
-            if st.form_submit_button("Salvar Pet"):
-                if nome_pet:
-                    st.session_state['pets'].append({
-                        "id": cod_pet_formatado,
-                        "dono": dono_selecionado,
-                        "nome": nome_pet,
-                        "raca": raca,
-                        "idade": f"{valor_idade} {unidade_idade}",
-                        "foto": foto
-                    })
-                    st.session_state['proximo_cod_pet'] += 1
-                    st.success(f"✅ Pet {nome_pet} salvo com código {cod_pet_formatado}!")
-                else:
-                    st.error("O nome do pet é obrigatório!")
+            if st.form_submit_button("Cadastrar Pet"):
+                st.session_state['pets'].append({
+                    "id": cod_pet, "dono": dono, "nome": nome_pet,
+                    "raca": raca, "idade": f"{idade_v} {idade_u}", "foto": foto
+                })
+                st.session_state['proximo_cod_pet'] += 1
+                st.success("Pet cadastrado!")
 
-with tab3:
-    st.header("Relatório de Associação")
-    if st.session_state['pets']:
-        for p in st.session_state['pets']:
-            with st.expander(f"🐶 {p['nome']} (Cód: {p['id']}) | Dono: {p['dono']}"):
-                st.write(f"**Raça:** {p['raca']}")
-                st.write(f"**Idade:** {p['idade']}")
-                if p['foto']:
-                    st.image(p['foto'], width=300, caption=f"Foto de {p['nome']}")
+# --- PÁGINA: RELATÓRIO GERAL ---
+elif menu == "Relatório Geral":
+    st.title("📋 Relatório de Clientes e Pets")
+    if not st.session_state['pets']:
+        st.info("Nenhum pet cadastrado.")
     else:
-        st.write("Nenhum registro encontrado.")
+        for p in st.session_state['pets']:
+            with st.container():
+                st.markdown(f"""
+                <div class="card">
+                    <h3>🐾 {p['nome']} (ID: {p['id']})</h3>
+                    <p><b>Dono:</b> {p['dono']}<br>
+                    <b>Raça:</b> {p['raca']} | <b>Idade:</b> {p['idade']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+                if p['foto']:
+                    st.image(p['foto'], width=250)
