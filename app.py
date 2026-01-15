@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, date
 
-# --- CONFIGURAÇÃO INICIAL ---
+# --- CONFIGURAÇÃO E ESTILO ---
 st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
 
-# --- ESTILO VISUAL ---
 st.markdown("""
     <style>
     [data-testid="stSidebar"] { background-color: #1e3d59 !important; }
@@ -15,80 +14,96 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- BANCO DE DADOS (SESSION STATE) ---
-if 'clientes' not in st.session_state: st.session_state['clientes'] = []
-if 'pets' not in st.session_state: st.session_state['pets'] = []
-if 'estoque' not in st.session_state: 
-    st.session_state['estoque'] = [
-        {"Item": "Vacina V10", "Preco": 120.00}, {"Item": "Consulta", "Preco": 150.00},
-        {"Item": "Castração Macho", "Preco": 350.00}, {"Item": "Vermífugo", "Preco": 35.00}
-    ]
+# --- INICIALIZAÇÃO DE DADOS ---
+for key in ['clientes', 'pets', 'historico', 'estoque']:
+    if key not in st.session_state: st.session_state[key] = []
 
-# --- MENU LATERAL (EVITA O ERRO DE TELA EM BRANCO) ---
+# --- MENU LATERAL ---
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/2138/2138440.png", width=80)
     st.title("Ribeira Vet Pro")
-    st.divider()
-    menu = st.radio("NAVEGAÇÃO", ["🏠 Dashboard", "👤 Tutores", "🐾 Pets", "🩺 Prontuário IA", "📦 Produtos", "💰 Financeiro"])
+    menu = st.radio("NAVEGAÇÃO", ["🏠 Dashboard", "👤 Tutores", "🐾 Pets", "🩺 Prontuário IA", "💰 Financeiro"])
 
-# --- CABEÇALHO ---
-st.markdown(f"<div class='header-box'><h1 style='color:#1e3d59; margin:0;'>Ribeira Vet Pro</h1><p style='margin:0;'>Sistema de Gestão • {datetime.now().strftime('%d/%m/%Y')}</p></div>", unsafe_allow_html=True)
+# --- FUNÇÃO CALCULAR IDADE ---
+def calcular_idade(nasc):
+    hoje = date.today()
+    anos = hoje.year - nasc.year - ((hoje.month, hoje.day) < (nasc.month, nasc.day))
+    return f"{anos} anos"
 
-# --- 1. SESSÃO: TUTORES ---
+# --- 1. SESSÃO: TUTORES (MANTIDA) ---
 if menu == "👤 Tutores":
-    st.subheader("📝 Cadastro de Tutores")
+    st.subheader("👤 Cadastro de Tutores")
     with st.form("f_tutor", clear_on_submit=True):
         id_t = f"T{len(st.session_state['clientes']) + 1:03d}"
-        st.info(f"Código Gerado: **{id_t}**")
         nome = st.text_input("Nome do Cliente*")
-        c1, c2 = st.columns(2)
-        cpf = c1.text_input("CPF")
-        zap = c2.text_input("WhatsApp (Ex: 22985020463)*")
-        email = st.text_input("E-mail")
-        end = st.text_area("Endereço Completo")
+        zap = st.text_input("WhatsApp*")
         if st.form_submit_button("Salvar Tutor"):
             if nome and zap:
-                st.session_state['clientes'].append({"id": id_t, "nome": nome.upper(), "cpf": cpf, "zap": zap, "email": email, "endereco": end})
+                st.session_state['clientes'].append({"id": id_t, "nome": nome.upper(), "zap": zap})
                 st.success("Tutor salvo!")
-            else: st.error("Nome e WhatsApp são obrigatórios.")
 
-# --- 2. SESSÃO: PETS (PARÂMETROS COMPLETOS) ---
+# --- 2. SESSÃO: PETS (COM CÁLCULO DE IDADE) ---
 elif menu == "🐾 Pets":
-    st.subheader("🐾 Cadastro de Pets")
+    st.subheader("🐾 Ficha do Paciente")
     if not st.session_state['clientes']:
-        st.warning("⚠️ Cadastre um Tutor primeiro.")
+        st.warning("Cadastre um tutor primeiro.")
     else:
         with st.form("f_pet", clear_on_submit=True):
             id_p = f"P{len(st.session_state['pets']) + 1:03d}"
-            st.info(f"Código do Pet: **{id_p}**")
             t_lista = {f"{c['id']} - {c['nome']}": c['id'] for c in st.session_state['clientes']}
             tutor_ref = st.selectbox("Proprietário*", list(t_lista.keys()))
-            nome_p = st.text_input("Nome do Animal*")
+            nome_p = st.text_input("Nome do Pet*")
             
-            c1, c2, c3 = st.columns(3)
-            raca = c1.selectbox("Raça", ["SRD", "Spitz Alemão", "Poodle", "Shih Tzu", "Yorkshire", "Bulldog", "Golden", "Outra"])
-            sexo = c2.selectbox("Sexo", ["Macho", "Fêmea"])
-            idade = c3.text_input("Idade")
+            c1, c2 = st.columns(2)
+            nascimento = c1.date_input("Data de Nascimento", value=date(2020, 1, 1))
+            raca = c2.selectbox("Raça", ["SRD", "Spitz Alemão", "Poodle", "Shih Tzu", "Outra"])
             
-            c4, c5 = st.columns(2)
-            cor = c4.text_input("Cor do Pêlo")
-            chip = c5.text_input("Microchip")
+            # Exibe a idade calculada na hora
+            idade_calc = calcular_idade(nascimento)
+            st.write(f"**Idade Calculada:** {idade_calc}")
             
-            castrado = st.radio("Animal Castrado?", ["Sim", "Não", "Não informado"], horizontal=True)
+            sexo = st.selectbox("Sexo", ["Macho", "Fêmea"])
+            castrado = st.radio("Castrado?", ["Sim", "Não"], horizontal=True)
             
-            if st.form_submit_button("✅ CADASTRAR PET"):
-                if nome_p:
-                    st.session_state['pets'].append({"id": id_p, "tutor": t_lista[tutor_ref], "nome": nome_p.upper(), "raca": raca, "sexo": sexo, "idade": idade, "castrado": castrado})
-                    st.success(f"Pet {nome_p} cadastrado!")
-                else: st.error("Nome do animal é obrigatório.")
+            if st.form_submit_button("✅ SALVAR PET"):
+                st.session_state['pets'].append({
+                    "id": id_p, "tutor": t_lista[tutor_ref], "nome": nome_p.upper(), 
+                    "idade": idade_calc, "raca": raca, "sexo": sexo, "castrado": castrado
+                })
+                st.success(f"Pet {nome_p} salvo com {idade_calc}!")
 
-# --- 3. SESSÃO: DASHBOARD ---
+# --- 3. SESSÃO: PRONTUÁRIO (PREENCHIDO COM PARÂMETROS) ---
+elif menu == "🩺 Prontuário IA":
+    st.subheader("🩺 Atendimento Clínico")
+    if not st.session_state['pets']:
+        st.info("Cadastre um pet para iniciar o prontuário.")
+    else:
+        with st.form("f_prontuario"):
+            p_lista = {f"{p['id']} - {p['nome']}": p for p in st.session_state['pets']}
+            pet_sel = st.selectbox("Paciente", list(p_lista.keys()))
+            
+            st.markdown("### 📋 Parâmetros Vitais")
+            c1, c2, c3 = st.columns(3)
+            peso = c1.text_input("Peso (kg)")
+            temp = c2.text_input("Temperatura (°C)")
+            fc = c3.text_input("Freq. Cardíaca (bpm)")
+            
+            st.markdown("### 📝 Avaliação e Conduta")
+            relato = st.text_area("Relato da Consulta (Win+H)", height=200)
+            prescricao = st.text_area("Prescrição / Tratamento")
+            
+            if st.form_submit_button("💾 SALVAR ATENDIMENTO"):
+                st.session_state['historico'].append({
+                    "Data": date.today().strftime("%d/%m/%Y"),
+                    "Pet": p_lista[pet_sel]['nome'],
+                    "Peso": peso, "Temp": temp, "Relato": relato
+                })
+                st.success("Histórico clínico atualizado!")
+
+# --- 4. DASHBOARD ---
 elif menu == "🏠 Dashboard":
     st.subheader("📊 Painel Geral")
-    c1, c2 = st.columns(2)
-    c1.metric("Tutores", len(st.session_state['clientes']))
-    c2.metric("Pacientes", len(st.session_state['pets']))
-    
-    if st.session_state['clientes']:
-        st.write("### Últimos Clientes")
-        st.table(pd.DataFrame(st.session_state['clientes'])[['id', 'nome', 'zap']])
+    st.write(f"Tutores: {len(st.session_state['clientes'])} | Pacientes: {len(st.session_state['pets'])}")
+    if st.session_state['historico']:
+        st.write("### Últimos Atendimentos")
+        st.table(pd.DataFrame(st.session_state['historico']))
