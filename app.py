@@ -5,100 +5,116 @@ from datetime import datetime
 # Configuração da Página
 st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
 
-# --- CSS PARA ESTILO E CONTRASTE ---
+# --- DESIGN PROFISSIONAL (Correção de Contraste) ---
 st.markdown("""
     <style>
-    .main { background-color: #f1f3f6; }
     [data-testid="stSidebar"] { background-color: #1e3d59 !important; }
-    [data-testid="stSidebar"] .stRadio label p { color: white !important; font-weight: bold; }
-    [data-testid="stSidebar"] h2 { color: white !important; }
-    .header-box { 
-        background-color: white; padding: 20px; border-radius: 10px; 
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px;
-        border-left: 6px solid #2e7bcf;
-    }
-    .metric-card { background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); }
+    [data-testid="stSidebar"] * { color: white !important; font-weight: bold; }
+    .header-box { background: white; padding: 20px; border-radius: 10px; border-left: 6px solid #2e7bcf; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .stButton>button { background-color: #2e7bcf; color: white; width: 100%; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- INICIALIZAÇÃO DOS DADOS ---
-if 'clientes' not in st.session_state: st.session_state['clientes'] = []
-if 'pets' not in st.session_state: st.session_state['pets'] = []
-if 'historico' not in st.session_state: st.session_state['historico'] = []
+# --- INICIALIZAÇÃO SEGURA DO BANCO ---
+for key in ['clientes', 'pets', 'historico', 'estoque']:
+    if key not in st.session_state: st.session_state[key] = []
 
 # --- MENU LATERAL ---
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/620/620851.png", width=100)
-    st.markdown("<h2 style='text-align: center;'>Ribeira Vet Pro</h2>", unsafe_allow_html=True)
+    st.title("Ribeira Vet Pro")
     st.divider()
-    menu = st.radio("NAVEGAÇÃO", ["🏠 Dashboard", "👤 Tutores", "🐾 Pacientes", "🩺 Prontuário IA", "💰 Financeiro"])
+    menu = st.radio("NAVEGAÇÃO", ["🏠 Dashboard", "👤 Cadastro de Tutores", "🐾 Cadastro de Pets", "🩺 Prontuário IA"])
 
 # --- CABEÇALHO ---
-st.markdown(f"<div class='header-box'><h1 style='color:#1e3d59; margin:0;'>Ribeira Vet Pro</h1><p style='margin:0; color:#666;'>Sistema de Gestão • {datetime.now().strftime('%d/%m/%Y')}</p></div>", unsafe_allow_html=True)
+st.markdown(f"<div class='header-box'><h1 style='color:#1e3d59; margin:0;'>Ribeira Vet Pro</h1><p style='margin:0;'>Sistema de Gestão Veterinária • {datetime.now().strftime('%d/%m/%Y')}</p></div>", unsafe_allow_html=True)
 
-# --- TELAS ---
-
-if menu == "🏠 Dashboard":
-    st.subheader("📊 Resumo do Arquivo Clínico")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Tutores", len(st.session_state['clientes']))
-    c2.metric("Pacientes", len(st.session_state['pets']))
-    c3.metric("Atendimentos", len(st.session_state['historico']))
-
-    if st.session_state['historico']:
-        st.write("### Histórico Arquivado")
-        df_hist = pd.DataFrame(st.session_state['historico'])
-        st.dataframe(df_hist, use_container_width=True)
-        # Exportação segura
-        csv = df_hist.to_csv(index=False).encode('utf-8-sig')
-        st.download_button("📥 Exportar Arquivo (Excel/CSV)", data=csv, file_name="historico_clinico.csv")
-    else:
-        st.info("O arquivo de prontuários está vazio. Inicie um atendimento para registrar dados.")
-
-elif menu == "👤 Tutores":
-    st.subheader("Cadastro de Tutores")
-    with st.form("f_tutor", clear_on_submit=True):
-        proximo_cod = f"T{len(st.session_state['clientes']) + 1:03d}"
-        st.info(f"Código Gerado: **{proximo_cod}**")
-        nome = st.text_input("Nome do Cliente")
-        zap = st.text_input("WhatsApp")
-        if st.form_submit_button("Salvar Tutor"):
-            st.session_state['clientes'].append({"id": proximo_cod, "nome": nome, "zap": zap})
-            st.success(f"Tutor {nome} (Cod: {proximo_cod}) cadastrado!")
-
-elif menu == "🐾 Pacientes":
-    st.subheader("Cadastro de Pacientes")
-    if not st.session_state['clientes']: st.warning("Cadastre um tutor primeiro.")
-    else:
-        with st.form("f_pet", clear_on_submit=True):
-            proximo_cod_p = f"P{len(st.session_state['pets']) + 1:03d}"
-            st.info(f"Código do Paciente: **{proximo_cod_p}**")
-            tutor_opcoes = {f"{c['id']} - {c['nome']}": c['id'] for c in st.session_state['clientes']}
-            tutor_sel = st.selectbox("Dono (Código - Nome)", list(tutor_opcoes.keys()))
-            nome_p = st.text_input("Nome do Animal")
-            raca = st.text_input("Raça / Espécie")
-            if st.form_submit_button("Salvar Paciente"):
-                st.session_state['pets'].append({
-                    "id": proximo_cod_p, "nome": nome_p, 
-                    "tutor_id": tutor_opcoes[tutor_sel], "raca": raca
+# --- 1. CADASTRO DE TUTORES (TODOS OS PARÂMETROS RESTAURADOS) ---
+if menu == "👤 Cadastro de Tutores":
+    st.subheader("📝 Ficha Cadastral do Proprietário")
+    with st.form("form_tutor_completo", clear_on_submit=True):
+        proximo_id = f"T{len(st.session_state['clientes']) + 1:03d}"
+        st.info(f"Código Gerado: **{proximo_id}**")
+        
+        nome = st.text_input("Nome Completo")
+        col1, col2 = st.columns(2)
+        cpf = col1.text_input("CPF (Somente números)")
+        tel = col2.text_input("WhatsApp / Telefone")
+        
+        email = st.text_input("E-mail para contato")
+        endereco = st.text_area("Endereço Completo (Rua, Número, Bairro, Cidade)")
+        
+        if st.form_submit_button("✅ SALVAR TUTOR"):
+            if nome and tel:
+                st.session_state['clientes'].append({
+                    "id": proximo_id, "nome": nome, "cpf": cpf, 
+                    "tel": tel, "email": email, "endereco": endereco
                 })
-                st.success(f"Pet {nome_p} cadastrado com sucesso!")
+                st.success(f"Tutor {nome} cadastrado com sucesso!")
+            else:
+                st.error("Campos Nome e Telefone são obrigatórios!")
 
-elif menu == "🩺 Prontuário IA":
-    st.subheader("Atendimento Clínico")
-    if not st.session_state['pets']: st.info("Cadastre um pet primeiro.")
+# --- 2. CADASTRO DE PETS (COM VÍNCULO DE CÓDIGO) ---
+elif menu == "🐾 Cadastro de Pets":
+    st.subheader("🐶 Registro de Pacientes")
+    if not st.session_state['clientes']:
+        st.warning("⚠️ Cadastre um tutor antes de registrar um pet.")
     else:
-        with st.form("f_atend"):
-            pet_opcoes = {f"{p['id']} - {p['nome']} (Dono: {p['tutor_id']})": p for p in st.session_state['pets']}
-            pet_sel = st.selectbox("Selecione o Paciente", list(pet_opcoes.keys()))
-            relato = st.text_area("Resumo do Atendimento (Dite com Win+H)", height=200)
-            if st.form_submit_button("Arquivar Prontuário"):
-                dados_pet = pet_opcoes[pet_sel]
+        with st.form("form_pet_vinculo"):
+            proximo_id_p = f"P{len(st.session_state['pets']) + 1:03d}"
+            st.info(f"Código do Paciente: **{proximo_id_p}**")
+            
+            opcoes_tutores = {f"{c['id']} - {c['nome']}": c['id'] for c in st.session_state['clientes']}
+            tutor_ref = st.selectbox("Selecione o Proprietário Responsável", list(opcoes_tutores.keys()))
+            
+            nome_pet = st.text_input("Nome do Animal")
+            nascimento = st.date_input("Data de Nascimento", format="DD/MM/YYYY")
+            raca = st.text_input("Raça / Espécie")
+            
+            if st.form_submit_button("✅ REGISTRAR PET"):
+                st.session_state['pets'].append({
+                    "id": proximo_id_p, "nome": nome_pet, "tutor_id": opcoes_tutores[tutor_ref],
+                    "tutor_nome": tutor_ref.split(" - ")[1], "nasc": nascimento.strftime("%d/%m/%Y"), "raca": raca
+                })
+                st.success(f"O pet {nome_pet} foi vinculado ao tutor {tutor_ref}!")
+
+# --- 3. PRONTUÁRIO IA (ARQUIVAMENTO DE RESUMO) ---
+elif menu == "🩺 Prontuário IA":
+    st.subheader("🩺 Atendimento com Transcrição")
+    if not st.session_state['pets']:
+        st.info("Cadastre um pet primeiro para iniciar o atendimento.")
+    else:
+        with st.form("form_consulta_ia"):
+            opcoes_pets = {f"Cód: {p['id']} | Nome: {p['nome']} (Tutor: {p['tutor_id']})": p for p in st.session_state['pets']}
+            pet_atendimento = st.selectbox("Identifique o Paciente", list(opcoes_pets.keys()))
+            
+            st.info("🎤 Dica: Use 'Windows + H' no campo abaixo para transcrever sua voz.")
+            resumo = st.text_area("Resumo da Consulta / Diagnóstico / Prescrição", height=250)
+            
+            if st.form_submit_button("💾 ARQUIVAR NO HISTÓRICO"):
+                dados_paciente = opcoes_pets[pet_atendimento]
                 st.session_state['historico'].append({
                     "Data": datetime.now().strftime("%d/%m/%Y"),
-                    "Cód. Pet": dados_pet['id'],
-                    "Paciente": dados_pet['nome'],
-                    "Cód. Tutor": dados_pet['tutor_id'],
-                    "Resumo Clínico": relato
+                    "Cód_Pet": dados_paciente['id'], "Paciente": dados_paciente['nome'],
+                    "Cód_Tutor": dados_paciente['tutor_id'], "Tutor": dados_paciente['tutor_nome'],
+                    "Relato_IA": resumo
                 })
-                st.success("Atendimento arquivado no histórico!")
+                st.success("Atendimento arquivado! Os dados já estão disponíveis no Dashboard.")
+
+# --- 4. DASHBOARD (HISTÓRICO E EXPORTAÇÃO) ---
+elif menu == "🏠 Dashboard":
+    st.subheader("📊 Central de Dados e Pesquisa")
+    col1, col2 = st.columns(2)
+    col1.metric("Tutores Registrados", len(st.session_state['clientes']))
+    col2.metric("Pacientes no Sistema", len(st.session_state['pets']))
+    
+    st.divider()
+    if st.session_state['historico']:
+        df = pd.DataFrame(st.session_state['historico'])
+        st.write("### Histórico Completo de Atendimentos")
+        st.dataframe(df, use_container_width=True)
+        # Download simples para evitar erro de módulo
+        csv = df.to_csv(index=False).encode('utf-8-sig')
+        st.download_button("📥 Baixar Arquivo para Pesquisa (Excel/CSV)", data=csv, file_name="ribeira_vet_dados.csv")
+    else:
+        st.info("Realize um atendimento no Prontuário IA para gerar o arquivo de histórico.")
