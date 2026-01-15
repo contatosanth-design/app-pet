@@ -5,7 +5,7 @@ from datetime import datetime
 # Configuração da Página
 st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
 
-# --- DESIGN E CORES ---
+# --- DESIGN PROFISSIONAL ---
 st.markdown("""
     <style>
     [data-testid="stSidebar"] { background-color: #1e3d59; }
@@ -25,45 +25,43 @@ with st.sidebar:
     st.divider()
     menu = st.radio("MENU", ["🎉 Aniversariantes", "👤 Cadastro Tutor", "🐶 Cadastro Pet", "🩺 Prontuário"])
 
-# --- 🎉 PÁGINA: ANIVERSARIANTES (Fidelização) ---
+# --- 🎉 PÁGINA: ANIVERSARIANTES ---
 if menu == "🎉 Aniversariantes":
-    st.title("🎂 Pacientes que fazem aniversário hoje")
+    st.title("🎂 Aniversariantes de Hoje")
     hoje = datetime.now().strftime("%d/%m")
-    niver_encontrado = False
-    
+    encontrou = False
     for p in st.session_state['pets']:
         if p['nascimento'].strftime("%d/%m") == hoje:
-            niver_encontrado = True
-            tutor_info = st.session_state['clientes'].get(p['cod_tutor'], {})
+            encontrou = True
+            tutor = st.session_state['clientes'].get(p['cod_tutor'], {})
             col1, col2 = st.columns([3, 1])
-            col1.success(f"🐾 **{p['nome']}** está completando mais um ano de vida!")
-            
-            # Botão para facilitar o envio do Zap
-            msg = f"Olá {tutor_info.get('nome')}, o Consultório da Ribeira deseja um parabéns especial para o {p['nome']}! 🎂🐶"
-            link_zap = f"https://wa.me/{tutor_info.get('zap')}?text={msg.replace(' ', '%20')}"
-            col2.markdown(f"[📲 Enviar Parabéns]({link_zap})")
-            
-    if not niver_encontrado:
-        st.info("Nenhum pet faz aniversário hoje.")
+            col1.success(f"🐾 **{p['nome']}** faz anos hoje!")
+            msg = f"Olá {tutor.get('nome')}, o Consultório da Ribeira deseja um feliz aniversário ao {p['nome']}! 🎂"
+            link = f"https://wa.me/{tutor.get('zap')}?text={msg.replace(' ', '%20')}"
+            col2.markdown(f"[📲 Enviar WhatsApp]({link})")
+    if not encontrou: st.info("Sem aniversários para hoje.")
 
-# --- 👤 PÁGINA: CADASTRO TUTOR ---
+# --- 👤 PÁGINA: CADASTRO TUTOR (COM ENDEREÇO) ---
 elif menu == "👤 Cadastro Tutor":
     st.title("Ficha do Proprietário")
     with st.form("f_tutor"):
         id_t = f"T-{len(st.session_state['clientes'])+1:04d}"
-        nome = st.text_input("Nome Completo")
-        cpf = st.text_input("CPF")
-        zap = st.text_input("WhatsApp (com DDD)")
-        email = st.text_input("E-mail")
+        col1, col2 = st.columns(2)
+        nome = col1.text_input("Nome Completo")
+        cpf = col2.text_input("CPF")
+        zap = col1.text_input("WhatsApp (com DDD)")
+        email = col2.text_input("E-mail")
+        endereco = st.text_area("Endereço Completo") # CAMPO REINSTALADO
         if st.form_submit_button("Salvar Tutor"):
-            st.session_state['clientes'][id_t] = {"nome": nome, "zap": zap, "email": email, "cpf": cpf}
-            st.success("Tutor cadastrado!")
+            st.session_state['clientes'][id_t] = {
+                "nome": nome, "zap": zap, "email": email, "cpf": cpf, "end": endereco
+            }
+            st.success("Tutor cadastrado com sucesso!")
 
-# --- 🐶 PÁGINA: CADASTRO PET ---
+# --- 🐶 PÁGINA: CADASTRO PET (COM DATA NASCIMENTO) ---
 elif menu == "🐶 Cadastro Pet":
     st.title("Ficha do Paciente")
-    if not st.session_state['clientes']:
-        st.warning("Cadastre o tutor primeiro.")
+    if not st.session_state['clientes']: st.warning("Cadastre o tutor primeiro.")
     else:
         with st.form("f_pet"):
             tutores = [f"{k} - {v['nome']}" for k, v in st.session_state['clientes'].items()]
@@ -76,19 +74,17 @@ elif menu == "🐶 Cadastro Pet":
                     "nome": nome_p, "nascimento": nasc, "raca": raca, 
                     "cod_tutor": tutor_sel.split(" - ")[0]
                 })
-                st.success("Pet cadastrado com sucesso!")
+                st.success("Pet cadastrado!")
 
 # --- 🩺 PÁGINA: PRONTUÁRIO ---
 elif menu == "🩺 Prontuário":
     st.title("Atendimento Clínico")
-    if not st.session_state['pets']:
-        st.info("Nenhum pet cadastrado.")
+    if not st.session_state['pets']: st.info("Nenhum pet cadastrado.")
     else:
         with st.form("f_atend"):
             pet_sel = st.selectbox("Paciente", [p['nome'] for p in st.session_state['pets']])
-            col1, col2 = st.columns(2)
-            peso = col1.text_input("Peso (kg)")
-            temp = col2.text_input("Temperatura (°C)")
+            c1, c2 = st.columns(2)
+            peso, temp = c1.text_input("Peso (kg)"), c2.text_input("Temp (°C)")
             anamnese = st.text_area("Anamnese / Evolução Clínica")
             if st.form_submit_button("Finalizar Consulta"):
-                st.success("Prontuário atualizado!")
+                st.success("Prontuário guardado!")
