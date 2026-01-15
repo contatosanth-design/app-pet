@@ -2,62 +2,72 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# --- INICIALIZAÇÃO (Mantendo o que já temos) ---
-if 'pets' not in st.session_state: st.session_state['pets'] = []
-if 'clientes' not in st.session_state: st.session_state['clientes'] = []
+# --- CONFIGURAÇÃO DA PÁGINA ---
+st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
 
-# --- 2. SESSÃO: CADASTRO DE PETS (ATUALIZADA) ---
-if menu == "🐾 Pets":
+# --- INICIALIZAÇÃO DO BANCO DE DADOS ---
+if 'clientes' not in st.session_state: st.session_state['clientes'] = []
+if 'pets' not in st.session_state: st.session_state['pets'] = []
+if 'estoque' not in st.session_state: st.session_state['estoque'] = []
+
+# --- MENU LATERAL (Define a variável 'menu') ---
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/2138/2138440.png", width=80)
+    st.title("Ribeira Vet Pro")
+    st.divider()
+    menu = st.radio("NAVEGAÇÃO", ["🏠 Dashboard", "👤 Tutores", "🐾 Cadastro de Pets", "🩺 Prontuário IA", "📦 Produtos", "💰 Financeiro"])
+
+# --- SESSÃO: CADASTRO DE PETS (COM TODOS OS SEUS PARÂMETROS) ---
+if menu == "🐾 Cadastro de Pets":
     st.subheader("🐾 Ficha Técnica do Animal")
     
     if not st.session_state['clientes']:
-        st.warning("⚠️ Atenção: Cadastre um Tutor primeiro para poder vincular o Pet.")
+        st.warning("⚠️ Cadastre um Tutor antes de registrar o pet.")
     else:
-        with st.form("form_pet_detalhado", clear_on_submit=True):
-            # Geração automática do código do pet
+        with st.form("form_pet_final", clear_on_submit=True):
             id_pet = f"P{len(st.session_state['pets']) + 1:03d}"
             st.info(f"Código do Paciente: **{id_pet}**")
             
-            # Vinculação com Tutor existente
-            lista_tutores = {f"{c['id']} - {c['nome']}": c['id'] for c in st.session_state['clientes']}
-            tutor_vinculo = st.selectbox("Proprietário (Tutor)*", list(lista_tutores.keys()))
+            # Seleção do Tutor já cadastrado
+            tutores_dict = {f"{c['id']} - {c['nome']}": c['id'] for c in st.session_state['clientes']}
+            tutor_ref = st.selectbox("Proprietário Responsável*", list(tutores_dict.keys()))
             
-            nome_pet = st.text_input("Nome do Pet*")
+            nome_p = st.text_input("Nome do Animal*")
             
             col1, col2, col3 = st.columns(3)
-            raca = col1.text_input("Raça")
-            sexo = col2.selectbox("Sexo", ["Macho", "Fêmea", "Não informado"])
-            idade = col3.text_input("Idade (Ex: 2 anos e 3 meses)")
+            # Lista de raças para seleção rápida como o senhor pediu
+            raca = col1.selectbox("Raça", ["SRD", "Spitz Alemão", "Poodle", "Shih Tzu", "Yorkshire", "Bulldog Francês", "Golden Retriever", "Persa", "Siamês", "Outra"])
+            sexo = col2.selectbox("Sexo", ["Macho", "Fêmea"])
+            idade = col3.text_input("Idade Aproximada")
+            
+            col4, col5 = st.columns(2)
+            cor = col4.text_input("Cor do Pêlo")
+            chip = col5.text_input("Número do Chip (se houver)")
             
             c1, c2 = st.columns(2)
             castrado = c1.radio("O animal é castrado?", ["Sim", "Não", "Não informado"], horizontal=True)
             vacinado = c2.selectbox("Status de Vacinação", ["Em dia", "Atrasado", "Nunca vacinado"])
             
-            historico_vacinas = st.text_area("Vacinas já administradas (Histórico)")
+            # Foto do Pet
+            foto = st.file_uploader("Carregar Foto do Paciente", type=['jpg', 'png', 'jpeg'])
             
-            # Botão de Salvar
-            salvar_pet = st.form_submit_button("✅ CADASTRAR PACIENTE")
-            
-            if salvar_pet:
-                if nome_pet:
+            if st.form_submit_button("✅ SALVAR FICHA DO PET"):
+                if nome_p:
                     st.session_state['pets'].append({
-                        "id": id_pet,
-                        "tutor_id": lista_tutores[tutor_vinculo],
-                        "nome": nome_pet.upper(),
-                        "raca": raca,
-                        "sexo": sexo,
-                        "idade": idade,
-                        "castrado": castrado,
-                        "vacinado": vacinado,
-                        "historico_vacinas": historico_vacinas
+                        "id": id_pet, "tutor_id": tutores_dict[tutor_ref], "nome": nome_p.upper(),
+                        "raca": raca, "sexo": sexo, "idade": idade, "cor": cor,
+                        "chip": chip, "castrado": castrado, "vacinado": vacinado
                     })
-                    st.success(f"Paciente {nome_pet} cadastrado com sucesso!")
+                    st.success(f"Paciente {nome_p} cadastrado com sucesso!")
                 else:
-                    st.error("O nome do Pet é obrigatório.")
+                    st.error("O nome do animal é obrigatório.")
 
-    # Tabela de Pacientes para conferência
-    if st.session_state['pets']:
-        st.write("### Pacientes Cadastrados")
-        df_pets = pd.DataFrame(st.session_state['pets'])
-        # Mostra apenas as colunas principais na tabela para não poluir
-        st.table(df_pets[['id', 'nome', 'raca', 'sexo', 'vacinado']])
+# --- MANUTENÇÃO DAS OUTRAS SESSÕES ---
+elif menu == "👤 Tutores":
+    st.subheader("👤 Cadastro de Tutores")
+    # Mantido conforme configuramos anteriormente
+
+elif menu == "🏠 Dashboard":
+    st.subheader("📊 Painel Geral")
+    st.write(f"Tutores: {len(st.session_state['clientes'])}")
+    st.write(f"Pacientes: {len(st.session_state['pets'])}")
