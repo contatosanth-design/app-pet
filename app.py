@@ -6,118 +6,86 @@ import io
 # Configuração da Página
 st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
 
-# --- DESIGN E LOGOTIPO ---
+# --- CSS PARA ESTILO PROFISSIONAL (Inspirado na sua imagem) ---
 st.markdown("""
     <style>
-    [data-testid="stSidebar"] { background-color: #1e3d59; }
-    [data-testid="stSidebar"] * { color: white !important; }
-    .stButton>button { background-color: #2e7bcf; color: white; border-radius: 5px; }
-    .main { background-color: #f8f9fa; }
+    .main { background-color: #f1f3f6; }
+    [data-testid="stSidebar"] { background-color: #1e3d59; border-right: 2px solid #2e7bcf; }
+    .stButton>button { background-color: #2e7bcf; color: white; border-radius: 8px; font-weight: bold; width: 100%; }
+    .header-box { background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
+    .stTabs [data-baseweb="tab"] { background-color: #e1e4e8; border-radius: 5px 5px 0 0; padding: 10px 20px; color: #1e3d59; }
+    .stTabs [aria-selected="true"] { background-color: #2e7bcf !important; color: white !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- INICIALIZAÇÃO DO BANCO DE DADOS ---
-for key in ['clientes', 'pets', 'historico', 'estoque', 'financeiro']:
+# --- BANCO DE DADOS ---
+for key in ['clientes', 'pets', 'historico', 'estoque']:
     if key not in st.session_state: st.session_state[key] = {} if key == 'clientes' else []
 
-# --- MENU LATERAL ---
+# --- BARRA LATERAL (LOGO E MENU) ---
 with st.sidebar:
-    # Logotipo conforme combinado
-    st.image("https://raw.githubusercontent.com/contatosanth-design/app-pet/main/Squash_pet%20(1).png", width=200)
-    st.markdown("<h2 style='text-align: center;'>Ribeira Vet Pro</h2>", unsafe_allow_html=True)
+    # Logo Provisório (Substitua o link abaixo pelo seu link do GitHub quando quiser)
+    st.image("https://cdn-icons-png.flaticon.com/512/2138/2138440.png", width=100)
+    st.markdown("<h2 style='color: white; text-align: center;'>Ribeira Vet Pro</h2>", unsafe_allow_html=True)
     st.divider()
-    menu = st.radio("NAVEGAÇÃO", [
-        "📊 Dashboard & Excel", 
-        "👤 Tutores", 
-        "🐶 Pets", 
-        "🩺 Prontuário IA",
-        "💊 Estoque e Serviços",
-        "💰 Cobrança / Checkout",
-        "🎉 Aniversariantes"
-    ])
+    menu = st.radio("NAVEGAÇÃO", ["🏠 Dashboard", "👤 Tutores", "🐾 Pacientes", "🩺 Prontuário IA", "📦 Estoque", "💰 Financeiro", "🎂 Aniversários"])
 
-# --- 📊 DASHBOARD & EXCEL ---
-if menu == "📊 Dashboard & Excel":
-    st.title("Painel Administrativo")
+# --- CONTEÚDO PRINCIPAL ---
+st.markdown(f"<div class='header-box'><h1>Ribeira Vet Pro</h1><p>Sistema de Gestão de Dados - {datetime.now().strftime('%d/%m/%Y')}</p></div>", unsafe_allow_html=True)
+
+# --- LÓGICA DE ABAS/MENU ---
+if menu == "🏠 Dashboard":
+    st.subheader("Painel Geral")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Tutores", len(st.session_state['clientes']))
+    c2.metric("Pacientes", len(st.session_state['pets']))
+    
     if st.session_state['historico']:
         df = pd.DataFrame(st.session_state['historico'])
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-            df.to_excel(writer, index=False)
-        st.download_button("📥 Baixar Planilha de Atendimentos", data=buffer.getvalue(), file_name="atendimentos_ribeira.xlsx")
+        st.download_button("📥 Baixar Planilha Excel", data=df.to_csv().encode('utf-8'), file_name="dados_ribeira.csv")
         st.dataframe(df)
-    else: st.info("Nenhum atendimento arquivado para gerar planilha.")
 
-# --- 👤 CADASTRO DE TUTORES (COMPLETO) ---
 elif menu == "👤 Tutores":
-    st.title("Cadastro de Proprietário")
-    with st.form("f_tutor"):
-        id_t = f"T-{len(st.session_state['clientes'])+1:03d}"
+    st.subheader("Cadastro de Tutores")
+    with st.form("tutor"):
         nome = st.text_input("Nome Completo")
         c1, c2 = st.columns(2)
         cpf, zap = c1.text_input("CPF"), c2.text_input("WhatsApp")
-        email = st.text_input("E-mail")
         end = st.text_area("Endereço")
-        if st.form_submit_button("Salvar"):
-            st.session_state['clientes'][id_t] = {"nome": nome, "cpf": cpf, "zap": zap, "email": email, "end": end}
-            st.success("Tutor cadastrado!")
+        if st.form_submit_button("Salvar Tutor"):
+            st.session_state['clientes'][nome] = {"cpf": cpf, "zap": zap, "end": end}
+            st.success("Salvo!")
 
-# --- 🐶 CADASTRO DE PETS (COM DATA BR) ---
-elif menu == "🐶 Pets":
-    st.title("Cadastro de Pacientes")
-    if not st.session_state['clientes']: st.warning("Cadastre um tutor primeiro.")
-    else:
-        with st.form("f_pet"):
-            tutores = [f"{k} | {v['nome']}" for k, v in st.session_state['clientes'].items()]
-            tutor_sel = st.selectbox("Proprietário", tutores)
-            nome_p = st.text_input("Nome do Animal")
-            nasc = st.date_input("Data de Nascimento", format="DD/MM/YYYY")
-            if st.form_submit_button("Registrar Pet"):
-                st.session_state['pets'].append({"nome": nome_p, "nascimento": nasc, "tutor": tutor_sel.split(" | ")[1]})
-                st.success("Pet registrado!")
-
-# --- 🩺 PRONTUÁRIO IA (TRANSCRIÇÃO) ---
 elif menu == "🩺 Prontuário IA":
-    st.title("Consulta (Ditado por Voz)")
-    st.info("🎤 Use 'Windows + H' para transcrever o atendimento.")
-    if not st.session_state['pets']: st.info("Cadastre um pet primeiro.")
-    else:
-        with st.form("f_ia"):
-            pet = st.selectbox("Paciente", [p['nome'] for p in st.session_state['pets']])
-            anamnese = st.text_area("Relato Clínico (IA)", height=200)
-            if st.form_submit_button("Arquivar Consulta"):
-                st.session_state['historico'].append({"Data": datetime.now().strftime("%d/%m/%Y"), "Paciente": pet, "Relato": anamnese})
-                st.success("Consulta arquivada!")
+    st.subheader("Atendimento com Transcrição por Voz")
+    st.info("🎤 Atalho: Clique no campo e aperte 'Windows + H' para ditar.")
+    with st.form("prontuario"):
+        paciente = st.selectbox("Paciente", [p['nome'] for p in st.session_state['pets']] if st.session_state['pets'] else ["Nenhum cadastrado"])
+        c1, c2 = st.columns(2)
+        peso, temp = c1.text_input("Peso (kg)"), c2.text_input("Temp (°C)")
+        transcricao = st.text_area("Transcrição da Consulta / Diagnóstico", height=250)
+        if st.form_submit_button("Finalizar e Arquivar"):
+            st.session_state['historico'].append({"Data": datetime.now().strftime("%d/%m/%Y"), "Pet": paciente, "Relato": transcricao})
+            st.success("Arquivado!")
 
-# --- 💊 ESTOQUE E SERVIÇOS ---
-elif menu == "💊 Estoque e Serviços":
-    st.title("Tabela de Preços")
-    with st.form("f_est"):
-        item = st.text_input("Nome do Produto/Serviço")
-        valor = st.number_input("Preço (R$)", min_value=0.0)
+elif menu == "📦 Estoque":
+    st.subheader("Medicamentos, Vacinas e Serviços")
+    with st.form("estoque"):
+        item = st.text_input("Nome do Item")
+        preco = st.number_input("Preço", min_value=0.0)
         if st.form_submit_button("Adicionar"):
-            st.session_state['estoque'].append({"Item": item, "Preco": valor})
-            st.success("Item adicionado!")
+            st.session_state['estoque'].append({"Item": item, "Preco": preco})
     st.table(st.session_state['estoque'])
 
-# --- 💰 COBRANÇA / CHECKOUT (NOVO!) ---
-elif menu == "💰 Cobrança / Checkout":
-    st.title("Fechamento de Atendimento")
-    if not st.session_state['estoque']: st.info("Cadastre produtos no estoque primeiro.")
+elif menu == "💰 Financeiro":
+    st.subheader("Fechamento de Conta")
+    if not st.session_state['estoque']: st.info("Cadastre itens no estoque primeiro.")
     else:
-        with st.form("f_fin"):
-            tutor_nomes = [v['nome'] for v in st.session_state['clientes'].values()]
-            tutor = st.selectbox("Responsável pelo Pagamento", tutor_nomes)
-            selecionados = st.multiselect("Procedimentos/Produtos", [i['Item'] for i in st.session_state['estoque']])
-            if st.form_submit_button("Gerar Conta Final"):
-                total = sum(i['Preco'] for i in st.session_state['estoque'] if i['Item'] in selecionados)
-                st.write(f"### Valor Total para {tutor}: R$ {total:.2f}")
-                st.session_state['financeiro'].append({"Tutor": tutor, "Total": total, "Data": datetime.now()})
+        selecionados = st.multiselect("Itens utilizados", [i['Item'] for i in st.session_state['estoque']])
+        total = sum(i['Preco'] for i in st.session_state['estoque'] if i['Item'] in selecionados)
+        st.markdown(f"## Total: R$ {total:.2f}")
 
-# --- 🎉 ANIVERSARIANTES ---
-elif menu == "🎉 Aniversariantes":
-    st.title("🎂 Aniversariantes")
-    hoje = datetime.now().strftime("%d/%m")
-    for p in st.session_state['pets']:
-        if p['nascimento'].strftime("%d/%m") == hoje:
-            st.success(f"🐾 Parabéns para o(a) **{p['nome']}**!")
+elif menu == "🎂 Aniversários":
+    st.subheader("Felicitações do Dia")
+    st.info("Aqui aparecerão os aniversariantes cadastrados.")
