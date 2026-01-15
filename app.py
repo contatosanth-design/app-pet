@@ -1,93 +1,63 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import urllib.parse
 
-# --- CONFIGURAÇÃO E ESTILO ---
-st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
-
-st.markdown("""
-    <style>
-    [data-testid="stSidebar"] { background-color: #1e3d59 !important; }
-    [data-testid="stSidebar"] * { color: white !important; font-weight: bold !important; }
-    .header-box { background: white; padding: 20px; border-radius: 10px; border-left: 6px solid #2e7bcf; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .stButton>button { background-color: #2e7bcf; color: white; border-radius: 8px; width: 100%; }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- INICIALIZAÇÃO DE DADOS (MANTENDO PRODUTOS AUTOMÁTICOS) ---
-if 'estoque' not in st.session_state or len(st.session_state['estoque']) == 0:
-    st.session_state['estoque'] = [
-        {"Item": "Vacina V10 (Importada)", "Preco": 120.00}, {"Item": "Vacina Antirrábica", "Preco": 60.00},
-        {"Item": "Consulta Geral", "Preco": 150.00}, {"Item": "Simparic 10-20kg", "Preco": 85.00},
-        {"Item": "Castração Macho (Cão)", "Preco": 350.00}, {"Item": "Vermífugo (Drontal)", "Preco": 35.00}
-    ]
-
-if 'clientes' not in st.session_state: st.session_state['clientes'] = []
+# --- INICIALIZAÇÃO (Mantendo o que já temos) ---
 if 'pets' not in st.session_state: st.session_state['pets'] = []
-if 'historico' not in st.session_state: st.session_state['historico'] = []
+if 'clientes' not in st.session_state: st.session_state['clientes'] = []
 
-# --- MENU LATERAL ---
-with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2138/2138440.png", width=80)
-    st.title("Ribeira Vet Pro")
-    st.divider()
-    menu = st.radio("NAVEGAÇÃO", ["🏠 Dashboard", "👤 Cadastro de Tutores", "🐾 Pets", "🩺 Prontuário IA", "📦 Produtos", "💰 Financeiro & Recibo"])
-
-# --- CABEÇALHO ---
-st.markdown(f"<div class='header-box'><h1 style='color:#1e3d59; margin:0;'>Ribeira Vet Pro</h1><p style='margin:0;'>Clínica Veterinária • {datetime.now().strftime('%d/%m/%Y')}</p></div>", unsafe_allow_html=True)
-
-# --- SESSÃO ALTERADA: CADASTRO DE TUTORES ---
-if menu == "👤 Cadastro de Tutores":
-    st.subheader("👤 Cadastro de Tutor")
+# --- 2. SESSÃO: CADASTRO DE PETS (ATUALIZADA) ---
+if menu == "🐾 Pets":
+    st.subheader("🐾 Ficha Técnica do Animal")
     
-    with st.form("f_tutor_pro", clear_on_submit=True):
-        # Código gerado automaticamente
-        id_t = f"T{len(st.session_state['clientes']) + 1:03d}"
-        st.info(f"Código Gerado: **{id_t}**")
-        
-        # Parâmetros solicitados pelo usuário
-        nome = st.text_input("Nome do Cliente*")
-        
-        col1, col2 = st.columns(2)
-        cpf = col1.text_input("CPF")
-        whatsapp = col2.text_input("WhatsApp (Ex: 5522985020463)*")
-        
-        email = st.text_input("E-mail")
-        endereco = st.text_area("Endereço Completo")
-        
-        if st.form_submit_button("Salvar Tutor"):
-            if nome and whatsapp:
-                st.session_state['clientes'].append({
-                    "id": id_t, "nome": nome.upper(), "cpf": cpf, 
-                    "zap": whatsapp, "email": email, "endereco": endereco
-                })
-                st.success(f"Tutor {nome} cadastrado com sucesso!")
-            else:
-                st.error("Nome e WhatsApp são obrigatórios.")
+    if not st.session_state['clientes']:
+        st.warning("⚠️ Atenção: Cadastre um Tutor primeiro para poder vincular o Pet.")
+    else:
+        with st.form("form_pet_detalhado", clear_on_submit=True):
+            # Geração automática do código do pet
+            id_pet = f"P{len(st.session_state['pets']) + 1:03d}"
+            st.info(f"Código do Paciente: **{id_pet}**")
+            
+            # Vinculação com Tutor existente
+            lista_tutores = {f"{c['id']} - {c['nome']}": c['id'] for c in st.session_state['clientes']}
+            tutor_vinculo = st.selectbox("Proprietário (Tutor)*", list(lista_tutores.keys()))
+            
+            nome_pet = st.text_input("Nome do Pet*")
+            
+            col1, col2, col3 = st.columns(3)
+            raca = col1.text_input("Raça")
+            sexo = col2.selectbox("Sexo", ["Macho", "Fêmea", "Não informado"])
+            idade = col3.text_input("Idade (Ex: 2 anos e 3 meses)")
+            
+            c1, c2 = st.columns(2)
+            castrado = c1.radio("O animal é castrado?", ["Sim", "Não", "Não informado"], horizontal=True)
+            vacinado = c2.selectbox("Status de Vacinação", ["Em dia", "Atrasado", "Nunca vacinado"])
+            
+            historico_vacinas = st.text_area("Vacinas já administradas (Histórico)")
+            
+            # Botão de Salvar
+            salvar_pet = st.form_submit_button("✅ CADASTRAR PACIENTE")
+            
+            if salvar_pet:
+                if nome_pet:
+                    st.session_state['pets'].append({
+                        "id": id_pet,
+                        "tutor_id": lista_tutores[tutor_vinculo],
+                        "nome": nome_pet.upper(),
+                        "raca": raca,
+                        "sexo": sexo,
+                        "idade": idade,
+                        "castrado": castrado,
+                        "vacinado": vacinado,
+                        "historico_vacinas": historico_vacinas
+                    })
+                    st.success(f"Paciente {nome_pet} cadastrado com sucesso!")
+                else:
+                    st.error("O nome do Pet é obrigatório.")
 
-    # Tabela para conferência rápida
-    if st.session_state['clientes']:
-        st.write("### Tutores Cadastrados")
-        st.table(pd.DataFrame(st.session_state['clientes'])[['id', 'nome', 'zap']])
-
-# --- MANTENDO O RESTANTE IGUAL ---
-elif menu == "🐾 Pets":
-    st.subheader("🐾 Cadastro de Pets")
-    # Lógica de Pets mantida conforme versões anteriores
-
-elif menu == "🩺 Prontuário IA":
-    st.subheader("🩺 Atendimento com Transcrição")
-    # Mantendo Peso, Temperatura e Transcrição
-
-elif menu == "📦 Produtos":
-    st.subheader("📦 Produtos e Preços")
-    # Exibindo os 20 itens automáticos
-
-elif menu == "💰 Financeiro & Recibo":
-    st.subheader("💰 Financeiro")
-    # Mantendo lógica de recibo e WhatsApp
-
-elif menu == "🏠 Dashboard":
-    st.subheader("🏠 Painel Geral")
-    # Mantendo métricas e histórico
+    # Tabela de Pacientes para conferência
+    if st.session_state['pets']:
+        st.write("### Pacientes Cadastrados")
+        df_pets = pd.DataFrame(st.session_state['pets'])
+        # Mostra apenas as colunas principais na tabela para não poluir
+        st.table(df_pets[['id', 'nome', 'raca', 'sexo', 'vacinado']])
