@@ -6,86 +6,158 @@ import io
 # Configuração da Página
 st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
 
-# --- CSS PARA ESTILO PROFISSIONAL (Inspirado na sua imagem) ---
+# --- CSS PARA CORREÇÃO DE FONTES E CORES ---
 st.markdown("""
     <style>
+    /* Fundo da tela principal */
     .main { background-color: #f1f3f6; }
-    [data-testid="stSidebar"] { background-color: #1e3d59; border-right: 2px solid #2e7bcf; }
-    .stButton>button { background-color: #2e7bcf; color: white; border-radius: 8px; font-weight: bold; width: 100%; }
-    .header-box { background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
-    .stTabs [data-baseweb="tab"] { background-color: #e1e4e8; border-radius: 5px 5px 0 0; padding: 10px 20px; color: #1e3d59; }
-    .stTabs [aria-selected="true"] { background-color: #2e7bcf !important; color: white !important; }
+    
+    /* Menu Lateral Azul Profundo */
+    [data-testid="stSidebar"] { 
+        background-color: #1e3d59 !important; 
+        border-right: 2px solid #2e7bcf; 
+    }
+    
+    /* FORÇAR COR BRANCA NAS FONTES DO MENU */
+    [data-testid="stSidebar"] .stRadio label, 
+    [data-testid="stSidebar"] p, 
+    [data-testid="stSidebar"] h1, 
+    [data-testid="stSidebar"] h2 { 
+        color: white !important; 
+        font-weight: 500 !important;
+    }
+
+    /* Estilo dos Botões */
+    .stButton>button { 
+        background-color: #2e7bcf; 
+        color: white !important; 
+        border-radius: 8px; 
+        font-weight: bold; 
+    }
+
+    /* Caixa de Título (Header) */
+    .header-box { 
+        background-color: white; 
+        padding: 25px; 
+        border-radius: 12px; 
+        box-shadow: 0px 4px 12px rgba(0,0,0,0.08); 
+        margin-bottom: 25px;
+        border-left: 5px solid #2e7bcf;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 # --- BANCO DE DADOS ---
-for key in ['clientes', 'pets', 'historico', 'estoque']:
+for key in ['clientes', 'pets', 'historico', 'estoque', 'financeiro']:
     if key not in st.session_state: st.session_state[key] = {} if key == 'clientes' else []
 
-# --- BARRA LATERAL (LOGO E MENU) ---
+# --- BARRA LATERAL ---
 with st.sidebar:
-    # Logo Provisório (Substitua o link abaixo pelo seu link do GitHub quando quiser)
-    st.image("https://cdn-icons-png.flaticon.com/512/2138/2138440.png", width=100)
-    st.markdown("<h2 style='color: white; text-align: center;'>Ribeira Vet Pro</h2>", unsafe_allow_html=True)
+    # Logo estável para teste (Coração com Pet)
+    st.image("https://cdn-icons-png.flaticon.com/512/194/194279.png", width=120)
+    st.markdown("<h2 style='text-align: center;'>Ribeira Vet Pro</h2>", unsafe_allow_html=True)
     st.divider()
-    menu = st.radio("NAVEGAÇÃO", ["🏠 Dashboard", "👤 Tutores", "🐾 Pacientes", "🩺 Prontuário IA", "📦 Estoque", "💰 Financeiro", "🎂 Aniversários"])
+    
+    # Navegação com ícones
+    menu = st.radio("NAVEGAÇÃO", [
+        "🏠 Dashboard", 
+        "👤 Tutores", 
+        "🐾 Pacientes", 
+        "🩺 Prontuário IA", 
+        "📦 Estoque & Vacinas", 
+        "💰 Financeiro", 
+        "🎂 Aniversários"
+    ])
 
-# --- CONTEÚDO PRINCIPAL ---
-st.markdown(f"<div class='header-box'><h1>Ribeira Vet Pro</h1><p>Sistema de Gestão de Dados - {datetime.now().strftime('%d/%m/%Y')}</p></div>", unsafe_allow_html=True)
+# --- CABEÇALHO ---
+st.markdown(f"""
+    <div class='header-box'>
+        <h1 style='color: #1e3d59; margin: 0;'>Ribeira Vet Pro</h1>
+        <p style='color: #666; margin: 0;'>Sistema de Gestão de Dados Clínica Veterinária • {datetime.now().strftime('%d/%m/%Y')}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-# --- LÓGICA DE ABAS/MENU ---
+# --- LÓGICA DAS PÁGINAS ---
+
 if menu == "🏠 Dashboard":
-    st.subheader("Painel Geral")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Tutores", len(st.session_state['clientes']))
-    c2.metric("Pacientes", len(st.session_state['pets']))
+    c1, c2 = st.columns(2)
+    c1.metric("Tutores Cadastrados", len(st.session_state['clientes']))
+    c2.metric("Pacientes Atendidos", len(st.session_state['pets']))
     
     if st.session_state['historico']:
+        st.subheader("📊 Relatório de Atendimentos")
         df = pd.DataFrame(st.session_state['historico'])
-        st.download_button("📥 Baixar Planilha Excel", data=df.to_csv().encode('utf-8'), file_name="dados_ribeira.csv")
-        st.dataframe(df)
+        st.dataframe(df, use_container_width=True)
+        # Exportação Excel
+        towrite = io.BytesIO()
+        df.to_excel(towrite, index=False, engine='xlsxwriter')
+        st.download_button("📥 Baixar Planilha para Pesquisa", data=towrite.getvalue(), file_name="consultas.xlsx")
 
 elif menu == "👤 Tutores":
-    st.subheader("Cadastro de Tutores")
-    with st.form("tutor"):
+    st.subheader("Ficha do Proprietário")
+    with st.form("f_tutor", clear_on_submit=True):
         nome = st.text_input("Nome Completo")
         c1, c2 = st.columns(2)
         cpf, zap = c1.text_input("CPF"), c2.text_input("WhatsApp")
-        end = st.text_area("Endereço")
+        email = st.text_input("E-mail")
+        end = st.text_area("Endereço Completo")
         if st.form_submit_button("Salvar Tutor"):
-            st.session_state['clientes'][nome] = {"cpf": cpf, "zap": zap, "end": end}
-            st.success("Salvo!")
+            st.session_state['clientes'][nome] = {"cpf": cpf, "zap": zap, "email": email, "end": end}
+            st.success("Tutor registrado!")
+
+elif menu == "🐾 Pacientes":
+    st.subheader("Ficha do Animal")
+    if not st.session_state['clientes']: st.warning("Cadastre um tutor primeiro.")
+    else:
+        with st.form("f_pet", clear_on_submit=True):
+            dono = st.selectbox("Proprietário", list(st.session_state['clientes'].keys()))
+            nome_p = st.text_input("Nome do Pet")
+            nasc = st.date_input("Data de Nascimento", format="DD/MM/YYYY")
+            raca = st.text_input("Raça / Espécie")
+            if st.form_submit_button("Cadastrar Pet"):
+                st.session_state['pets'].append({"nome": nome_p, "nascimento": nasc, "tutor": dono, "raca": raca})
+                st.success("Paciente cadastrado!")
 
 elif menu == "🩺 Prontuário IA":
-    st.subheader("Atendimento com Transcrição por Voz")
-    st.info("🎤 Atalho: Clique no campo e aperte 'Windows + H' para ditar.")
-    with st.form("prontuario"):
-        paciente = st.selectbox("Paciente", [p['nome'] for p in st.session_state['pets']] if st.session_state['pets'] else ["Nenhum cadastrado"])
-        c1, c2 = st.columns(2)
-        peso, temp = c1.text_input("Peso (kg)"), c2.text_input("Temp (°C)")
-        transcricao = st.text_area("Transcrição da Consulta / Diagnóstico", height=250)
-        if st.form_submit_button("Finalizar e Arquivar"):
-            st.session_state['historico'].append({"Data": datetime.now().strftime("%d/%m/%Y"), "Pet": paciente, "Relato": transcricao})
-            st.success("Arquivado!")
+    st.subheader("Atendimento Clínico (Voz)")
+    st.info("🎤 **Instrução:** Clique no campo de texto e use 'Windows + H' para ditar a consulta.")
+    if not st.session_state['pets']: st.info("Cadastre um pet primeiro.")
+    else:
+        with st.form("f_atend"):
+            pet_sel = st.selectbox("Paciente", [p['nome'] for p in st.session_state['pets']])
+            c1, c2 = st.columns(2)
+            peso, temp = c1.text_input("Peso (kg)"), c2.text_input("Temp (°C)")
+            relato = st.text_area("Transcrição da Consulta e Diagnóstico", height=250)
+            if st.form_submit_button("💾 Salvar Atendimento"):
+                st.session_state['historico'].append({
+                    "Data": datetime.now().strftime("%d/%m/%Y"),
+                    "Paciente": pet_sel, "Peso": peso, "Temp": temp, "Diagnostico": relato
+                })
+                st.success("Prontuário salvo no histórico!")
 
-elif menu == "📦 Estoque":
-    st.subheader("Medicamentos, Vacinas e Serviços")
-    with st.form("estoque"):
-        item = st.text_input("Nome do Item")
-        preco = st.number_input("Preço", min_value=0.0)
+elif menu == "📦 Estoque & Vacinas":
+    st.subheader("Catálogo de Itens e Serviços")
+    with st.form("f_est"):
+        item = st.text_input("Nome da Vacina/Medicamento/Serviço")
+        preco = st.number_input("Valor de Venda (R$)", min_value=0.0)
         if st.form_submit_button("Adicionar"):
             st.session_state['estoque'].append({"Item": item, "Preco": preco})
     st.table(st.session_state['estoque'])
 
 elif menu == "💰 Financeiro":
-    st.subheader("Fechamento de Conta")
-    if not st.session_state['estoque']: st.info("Cadastre itens no estoque primeiro.")
+    st.subheader("Cobrança e Checkout")
+    if not st.session_state['estoque']: st.info("Cadastre preços no estoque primeiro.")
     else:
-        selecionados = st.multiselect("Itens utilizados", [i['Item'] for i in st.session_state['estoque']])
-        total = sum(i['Preco'] for i in st.session_state['estoque'] if i['Item'] in selecionados)
-        st.markdown(f"## Total: R$ {total:.2f}")
+        with st.form("f_cob"):
+            tutor = st.selectbox("Tutor Responsável", list(st.session_state['clientes'].keys()) if st.session_state['clientes'] else ["Nenhum"])
+            selecionados = st.multiselect("Procedimentos realizados", [i['Item'] for i in st.session_state['estoque']])
+            if st.form_submit_button("Calcular Total"):
+                total = sum(i['Preco'] for i in st.session_state['estoque'] if i['Item'] in selecionados)
+                st.markdown(f"### Valor Final: R$ {total:.2f}")
 
 elif menu == "🎂 Aniversários":
-    st.subheader("Felicitações do Dia")
-    st.info("Aqui aparecerão os aniversariantes cadastrados.")
+    st.subheader("Próximos Aniversariantes")
+    hoje = datetime.now().strftime("%d/%m")
+    for p in st.session_state['pets']:
+        if p['nascimento'].strftime("%d/%m") == hoje:
+            st.success(f"🐾 Hoje é aniversário do(a) **{p['nome']}**!")
