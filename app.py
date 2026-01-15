@@ -25,4 +25,4 @@ if gerar:
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, "FICHA VETERINÁRIA", ln=True)
 
-    pdf.set_font("Arial", size=12)_
+    pdf.set_font("Arial", size=12)
