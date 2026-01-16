@@ -152,82 +152,73 @@ elif menu == "🩺 Prontuário IA":
         st.info("Nenhum pet cadastrado para atendimento.")
 
 # =========================================================
-# MÓDULO 4: FINANCEIRO (MENU CLICÁVEL E CARRINHO)
+# MÓDULO 4: FINANCEIRO (ESTÁVEL - VERSÃO CARRINHO)
 # =========================================================
 elif menu == "💰 Financeiro":
     st.subheader("💰 Orçamento e Venda Rápida")
 
-    # 1. INICIALIZA O CARRINHO SE NÃO EXISTIR
+    # Inicializa o carrinho na memória se estiver vazio
     if 'carrinho' not in st.session_state:
         st.session_state['carrinho'] = []
 
-    # 2. "POP-UP" - O CARDÁPIO DE PRODUTOS CLICÁVEIS
-    with st.expander("📋 ABRIR TABELA DE PREÇOS (CLIQUE PARA ADICIONAR)"):
-        st.write("Toque no botão '+' para enviar o item ao orçamento:")
+    # 1. GAVETA DE PRODUTOS (O seu "Pop-up" clicável)
+    with st.expander("📋 ABRIR TABELA DE PREÇOS (CLIQUE NO ➕ PARA ADICIONAR)"):
+        st.write("Consulte e selecione os itens para a nota:")
         
-        # Criamos o cabeçalho da tabela clicável
-        cols_cabecalho = st.columns([3, 1, 1])
-        cols_cabecalho.write("**Item / Serviço**")
-        cols_cabecalho.write("**Preço**")
-        cols_cabecalho.write("**Ação**")
-        
-        # Geramos as linhas clicáveis
+        # Criamos as colunas para organizar a visualização
         for idx, produto in enumerate(st.session_state['estoque']):
             c1, c2, c3 = st.columns([3, 1, 1])
-            c1.write(produto['Item'])
+            c1.write(f"**{produto['Item']}**")
             c2.write(f"R$ {produto['Preco']:.2f}")
-            # Botão que funciona como o 'clique na linha'
-            if c3.button("➕", key=f"add_{idx}"):
+            
+            # Botão de adição rápida (O 'clique' que o senhor pediu)
+            if c3.button("➕", key=f"btn_add_{idx}"):
                 st.session_state['carrinho'].append({
-                    "id_temp": datetime.now().timestamp(), # ID único para remoção
                     "Item": produto['Item'], 
                     "Preco": produto['Preco']
                 })
-                st.toast(f"{produto['Item']} adicionado!") # Aviso rápido na tela
+                st.toast(f"{produto['Item']} adicionado!") # Aviso rápido
 
     st.divider()
 
-    # 3. ÁREA DO ORÇAMENTO (O "CARRINHO")
+    # 2. ÁREA DO RECIBO (ONDE APARECEM OS ITENS CLICADOS)
     if not st.session_state['clientes']:
         st.warning("Cadastre um tutor primeiro.")
     else:
         t_lista = {c['nome']: c for c in st.session_state['clientes']}
-        t_nome = st.selectbox("Tutor", list(t_lista.keys()))
+        t_nome = st.selectbox("Selecione o Tutor para a Nota", list(t_lista.keys()))
         
         if st.session_state['carrinho']:
-            st.markdown("### 📄 Orçamento Atual")
+            st.markdown("### 📄 Itens Selecionados")
             total_geral = 0
-            itens_para_remover = []
-
-            for i, item_carrinho in enumerate(st.session_state['carrinho']):
-                c_item, c_valor, c_lixo = st.columns([3, 1, 1])
-                c_item.write(f"🔹 {item_carrinho['Item']}")
-                c_valor.write(f"R$ {item_carrinho['Preco']:.2f}")
+            
+            # Exibe os itens e permite remover um a um
+            for i, item in enumerate(st.session_state['carrinho']):
+                col_i, col_v, col_x = st.columns([3, 1, 1])
+                col_i.write(f"🔹 {item['Item']}")
+                col_v.write(f"R$ {item['Preco']:.2f}")
                 
-                # Botão para retirar o item se não for mais necessário
-                if c_lixo.button("❌", key=f"rem_{i}"):
-                    itens_para_remover.append(i)
+                # Botão para retirar da nota se o senhor desistir
+                if col_x.button("❌", key=f"btn_rem_{i}"):
+                    st.session_state['carrinho'].pop(i)
+                    st.rerun()
                 
-                total_geral += item_carrinho['Preco']
-
-            # Remove os itens marcados
-            for index in sorted(itens_para_remover, reverse=True):
-                st.session_state['carrinho'].pop(index)
-                st.rerun()
+                total_geral += item['Preco']
 
             st.divider()
-            st.markdown(f"## **TOTAL: R$ {total_geral:.2f}**")
+            st.markdown(f"## **VALOR TOTAL: R$ {total_geral:.2f}**")
 
-            col_btn1, col_btn2 = st.columns(2)
-            if col_btn1.button("🗑️ Limpar Tudo"):
+            # Ações Finais
+            col_fim1, col_fim2 = st.columns(2)
+            if col_fim1.button("🗑️ Limpar Toda a Nota"):
                 st.session_state['carrinho'] = []
                 st.rerun()
 
-            if col_btn2.button("📲 WhatsApp"):
+            if col_fim2.button("📲 Gerar Recibo WhatsApp"):
                 zap = t_lista[t_nome]['zap']
-                resumo = "\n".join([f"- {item['Item']}: R$ {item['Preco']:.2f}" for item in st.session_state['carrinho']])
-                msg = f"Olá {t_nome}, orçamento Ribeira Vet:\n\n{resumo}\n\n*Total: R$ {total_geral:.2f}*"
+                resumo = "\n".join([f"- {it['Item']}: R$ {it['Preco']:.2f}" for it in st.session_state['carrinho']])
+                msg = f"Olá {t_nome}, segue orçamento da Ribeira Vet:\n\n{resumo}\n\n*Total: R$ {total_geral:.2f}*"
                 link = f"https://wa.me/{zap}?text={urllib.parse.quote(msg)}"
-                st.markdown(f"#### [Clique para Enviar]({link})")
+                st.markdown(f"#### [👉 Clique para Enviar via WhatsApp]({link})")
         else:
-            st.info("O orçamento está vazio. Abra a tabela acima e clique no ➕ para adicionar itens.")
+            st.info("O orçamento está vazio. Abra a tabela acima para adicionar itens clicando no ➕.")
