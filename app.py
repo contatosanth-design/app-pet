@@ -105,6 +105,54 @@ elif menu == "👤 Tutores":
         
         # Exibe a tabela com as linhas pretas (st.table é mais estável no notebook)
         st.table(df_tutores)
+
+# =========================================================
+# MÓDULO 2: PETS (VÍNCULO COM TUTOR)
+# =========================================================
+elif menu == "🐾 Pets":
+    st.subheader("🐾 Gestão de Pacientes")
+
+    with st.form("form_pet", clear_on_submit=True):
+        # Distribuição de espaço inspirada no seu Canva
+        c1, c2 = st.columns([2, 1])
+        nome_pet = c1.text_input("Nome do Pet (Obrigatório) *")
+        especie = c2.selectbox("Espécie", ["Cão", "Gato", "Outro"])
+        
+        c3, c4 = st.columns([1, 1])
+        raca = c3.text_input("Raça")
+        idade = c4.text_input("Idade (Ex: 2 anos)")
+
+        # Vincula ao Tutor que já está cadastrado no Módulo 1
+        if st.session_state['clientes']:
+            lista_tutores = [t['NOME'] for t in st.session_state['clientes']]
+            tutor_responsavel = st.selectbox("Tutor Responsável", lista_tutores)
+        else:
+            st.warning("⚠️ Cadastre um Tutor no Módulo 1 primeiro!")
+            tutor_responsavel = "Não vinculado"
+
+        if st.form_submit_button("💾 Salvar Paciente"):
+            if nome_pet:
+                novo_pet = {
+                    "PET": nome_pet.upper(),
+                    "TUTOR": tutor_responsavel,
+                    "ESPÉCIE": especie,
+                    "RAÇA": raca if raca else "---",
+                    "IDADE": idade if idade else "---"
+                }
+                st.session_state['pets'].append(novo_pet)
+                st.success(f"Paciente {nome_pet.upper()} cadastrado!")
+                st.rerun()
+            else:
+                st.error("O nome do Pet é obrigatório.")
+
+    st.divider()
+
+    # Lista de Pets com Numeração e Grade
+    if st.session_state['pets']:
+        st.write("📋 **Pacientes Cadastrados**")
+        df_pets = pd.DataFrame(st.session_state['pets'])
+        df_pets.index = [f"{i+1:02d}" for i in range(len(df_pets))]
+        st.table(df_pets)
 # =========================================================
 # MÓDULO 3: PRONTUÁRIO IA (OTIMIZADO PARA VOZ)
 # =========================================================
