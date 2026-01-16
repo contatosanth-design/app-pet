@@ -107,52 +107,58 @@ elif menu == "👤 Tutores":
         st.table(df_tutores)
 
 # =========================================================
-# MÓDULO 2: PETS (CORREÇÃO DE BOTÃO E LAYOUT)
+# MÓDULO 2: PETS (COM LISTA DE RAÇAS AUTOMÁTICA)
 # =========================================================
 elif menu == "🐾 Pets":
     st.subheader("🐾 Gestão de Pacientes")
 
-    # Iniciamos o formulário
-    with st.form("form_paciente_final", clear_on_submit=True):
-        # Primeira Linha: Nome e Espécie
+    # Conjuntos de Raças
+    racas_caes = ["SRD (Vira-lata)", "Shih-tzu", "Poodle", "Pinscher", "Golden Retriever", "Bulldog", "Yorkshire", "Dachshund", "Outra"]
+    racas_gatos = ["SRD (Vira-lata)", "Persa", "Siamês", "Maine Coon", "Angorá", "Bengal", "Outra"]
+
+    with st.form("form_paciente_v4", clear_on_submit=True):
+        # Nome e Espécie lado a lado
         c1, c2 = st.columns([3, 1])
         nome_pet = c1.text_input("Nome do Pet (Obrigatório) *")
         especie = c2.selectbox("Espécie", ["Cão", "Gato", "Outro"])
         
-        # Segunda Linha: Raça e Idade
+        # Seleção dinâmica de raça baseada na espécie
         c3, c4 = st.columns([1, 1])
-        raca = c3.text_input("Raça")
+        if especie == "Cão":
+            raca = c3.selectbox("Raça do Cão", racas_caes)
+        elif especie == "Gato":
+            raca = c3.selectbox("Raça do Gato", racas_gatos)
+        else:
+            raca = c3.text_input("Especifique a Raça")
+            
         idade = c4.text_input("Idade (Ex: 2 anos)")
 
-        # Seleção do Tutor (Puxa do Módulo 1)
+        # Vínculo com Tutor (Módulo 1)
         if st.session_state['clientes']:
-            lista_nomes = [cli['NOME'] for cli in st.session_state['clientes']]
-            tutor_vinculo = st.selectbox("Tutor Responsável", lista_nomes)
+            lista_tutores = [t['NOME'] for t in st.session_state['clientes']]
+            tutor_resp = st.selectbox("Tutor Responsável", lista_tutores)
         else:
             st.warning("⚠️ Cadastre um Tutor no Módulo 1 primeiro!")
-            tutor_vinculo = "Sem Tutor"
+            tutor_resp = "Sem Tutor"
 
-        # O BOTÃO QUE ESTAVA FALTANDO (Precisa estar dentro do 'with')
-        botao_salvar = st.form_submit_button("💾 Salvar Cadastro do Pet")
-
-        if botao_salvar:
+        if st.form_submit_button("💾 Salvar Cadastro do Pet"):
             if nome_pet:
                 novo_pet = {
                     "PET": nome_pet.upper(),
-                    "TUTOR": tutor_vinculo,
+                    "TUTOR": tutor_resp,
                     "ESPÉCIE": especie,
-                    "RAÇA": raca if raca else "---",
+                    "RAÇA": raca,
                     "IDADE": idade if idade else "---"
                 }
                 st.session_state['pets'].append(novo_pet)
-                st.success(f"Paciente {nome_pet.upper()} cadastrado com sucesso!")
+                st.success(f"Paciente {nome_pet.upper()} cadastrado!")
                 st.rerun()
             else:
-                st.error("O Nome do Pet é obrigatório.")
+                st.error("O nome do Pet é obrigatório.")
 
     st.divider()
 
-    # Lista de Pets em Grade (Estilo Excel)
+    # Tabela com linhas de grade e numeração
     if st.session_state['pets']:
         st.write("📋 **Pacientes Cadastrados**")
         df_pets = pd.DataFrame(st.session_state['pets'])
