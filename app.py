@@ -194,7 +194,9 @@ elif menu == "💰 Financeiro":
                 st.rerun()
             total += item['Preco']
             
-        st.markdown(f"<h2 style='text-align: right;'>TOTAL: R$ {total:.2f}</h2>", unsafe_allow_html=True)# =========================================================
+        st.markdown(f"<h2 style='text-align: right;'>TOTAL: R$ {total:.2f}</h2>", unsafe_allow_html=True)
+        
+# =========================================================
 # MÓDULO 5: GESTÃO DE TABELA DE PREÇOS (IMPORTADOR)
 # =========================================================
 elif menu == "⚙️ Tabela de Preços":
@@ -205,19 +207,17 @@ elif menu == "⚙️ Tabela de Preços":
         arquivo = st.file_uploader("Arraste seu arquivo de preços aqui", type=['xlsx', 'csv'])
         if arquivo:
             try:
-                # Se for Excel, lê. Se for CSV, lê também.
                 df_novo = pd.read_excel(arquivo) if arquivo.name.endswith('xlsx') else pd.read_csv(arquivo)
                 if st.button("Confirmar Importação de Itens"):
                     for _, row in df_novo.iterrows():
-                        # Ajuste os nomes 'Item' e 'Preco' conforme sua planilha
                         st.session_state['estoque'].append({"Item": str(row[0]).upper(), "Preco": float(row[1])})
                     st.success("Tabela importada com sucesso!")
                     st.rerun()
             except Exception as e:
                 st.error("Erro ao ler arquivo. Verifique se a 1ª coluna é o Nome e a 2ª é o Preço.")
 
-    # Formulário Manual (Igual ao anterior)
-    with st.form("add_estoque", clear_on_submit=True):
+    # Cadastro Manual
+    with st.form("add_manual", clear_on_submit=True):
         st.write("➕ **Adicionar Manualmente**")
         c1, c2 = st.columns([3, 1])
         n_item = c1.text_input("Descrição do Serviço")
