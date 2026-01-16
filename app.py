@@ -60,63 +60,50 @@ if menu == "🏠 Dashboard":
         st.info("Nenhum atendimento hoje. A lista aparecerá aqui após usar o Prontuário.")
 
 # =========================================================
-# MÓDULO 1: CADASTRO DE TUTORES (AJUSTADO)
+# MÓDULO 1: CADASTRO DE TUTORES (VERSÃO FINAL)
 # =========================================================
 elif menu == "👤 Tutores":
-    st.subheader("👤 Cadastro de Tutores")
+    st.subheader("👤 Gestão de Clientes")
 
-    with st.form("form_tutor", clear_on_submit=True):
-        nome = st.text_input("Nome Completo (Obrigatório) *")
-        # Removi a obrigatoriedade dos campos abaixo
-        zap = st.text_input("WhatsApp (Opcional - Ex: 21999999999)")
+    with st.form("form_tutor_v2", clear_on_submit=True):
+        col_n1, col_n2 = st.columns([2, 1])
+        nome = col_n1.text_input("Nome Completo (Obrigatório) *")
+        zap = col_n2.text_input("WhatsApp (Opcional)")
+        
+        endereco = st.text_input("Endereço Completo (Opcional)")
         email = st.text_input("E-mail (Opcional)")
         
-        if st.form_submit_button("Cadastrar Tutor"):
-            if nome:  # Verifica apenas se o nome foi preenchido
+        if st.form_submit_button("💾 Salvar Cadastro"):
+            if nome:
                 novo_tutor = {
-                    "nome": nome.upper(),
-                    "zap": zap if zap else "Não informado",
-                    "email": email if email else "Não informado"
+                    "NOME": nome.upper(),
+                    "WHATSAPP": zap if zap else "---",
+                    "ENDEREÇO": endereco if endereco else "---",
+                    "E-MAIL": email if email else "---"
                 }
                 st.session_state['clientes'].append(novo_tutor)
-                st.success(f"Tutor {nome} cadastrado com sucesso!")
+                # Ordena a lista por nome automaticamente
+                st.session_state['clientes'] = sorted(st.session_state['clientes'], key=lambda x: x['NOME'])
+                st.success(f"Tutor {nome.upper()} cadastrado e organizado na lista!")
                 st.rerun()
             else:
-                st.error("Por favor, preencha pelo menos o nome do tutor.")
+                st.error("O campo 'Nome' não pode ficar vazio.")
 
     st.divider()
     
-    # Lista de Tutores com visual de Grade
+    # Exibição da Lista com Numeração e Ordem Alfabética
     if st.session_state['clientes']:
-        st.write("📋 **Tutores Cadastrados**")
+        st.write("📋 **Lista de Clientes (Ordem Alfabética)**")
         df_tutores = pd.DataFrame(st.session_state['clientes'])
-        st.table(df_tutores.rename(columns={'nome': 'NOME', 'zap': 'WHATSAPP', 'email': 'E-MAIL'}))
-# =========================================================
-# MÓDULO 2: PETS
-# =========================================================
-elif menu == "🐾 Pets":
-    st.subheader("🐾 Ficha do Paciente")
-    if not st.session_state['clientes']:
-        st.warning("Cadastre um tutor primeiro.")
-    else:
-        with st.form("f_pet"):
-            t_lista = {f"{c['id']} - {c['nome']}": c['nome'] for c in st.session_state['clientes']}
-            t_sel = st.selectbox("Proprietário*", list(t_lista.keys()))
-            nome_p = st.text_input("Nome do Pet*")
-            c1, c2, c3 = st.columns(3)
-            especie = c1.selectbox("Espécie", ["Cão", "Gato", "Outro"])
-            raca = c2.selectbox("Raça", ["SRD", "Pinscher", "Poodle", "Shih Tzu", "Pitbull", "Outra"])
-            sexo = c3.selectbox("Sexo", ["Macho", "Fêmea"])
-            
-            nasc = st.date_input("Data de Nascimento", value=date(2020, 1, 1), format="DD/MM/YYYY")
-            hoje = date.today()
-            idade_real = hoje.year - nasc.year - ((hoje.month, hoje.day) < (nasc.month, nasc.day))
-            st.info(f"O paciente tem {idade_real} anos.")
-            
-            if st.form_submit_button("✅ Salvar Pet"):
-                st.session_state['pets'].append({"nome": nome_p.upper(), "raca": raca, "idade": idade_real, "tutor": t_lista[t_sel]})
-                st.success("Pet salvo!")
+        
+        # Cria a numeração automática 01, 02...
+        df_tutores.index = [f"{i+1:02d}" for i in range(len(df_tutores))]
+        
+        st.table(df_tutores)
 
+        if st.button("🗑️ Excluir Último Cadastro"):
+            st.session_state['clientes'].pop()
+            st.rerun()
 # =========================================================
 # MÓDULO 3: PRONTUÁRIO IA (OTIMIZADO PARA VOZ)
 # =========================================================
