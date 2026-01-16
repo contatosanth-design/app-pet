@@ -213,8 +213,7 @@ elif menu == "💰 Financeiro":
             st.rerun()
             
         if col_zap.button("📲 WhatsApp"):
-            st.success("Link gerado!"))
-            
+            st.success("Link gerado!")            
 # =========================================================
 # MÓDULO 5: GESTÃO DE TABELA DE PREÇOS (IMPORTADOR)
 # =========================================================
