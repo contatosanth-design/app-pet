@@ -152,117 +152,77 @@ elif menu == "🩺 Prontuário IA":
         st.info("Nenhum pet cadastrado para atendimento.")
 
 # =========================================================
-# MÓDULO 4: FINANCEIRO (VISUAL GRADE DE CADERNO)
+# MÓDULO 4: FINANCEIRO (ESTILO CANVA / NOTA PROFISSIONAL)
 # =========================================================
 elif menu == "💰 Financeiro":
-    st.subheader("💰 Orçamento com Grade")
-
-    # Truque de CSS para desenhar as bordas das colunas (Grade)
-    st.markdown("""
-        <style>
-        .grade-caderno {
-            border: 1px solid #ccc;
-            padding: 5px;
-            text-align: center;
-            background-color: #f9f9f9;
-        }
-        .linha-item {
-            border-bottom: 1px solid #eee;
-            border-left: 1px solid #ccc;
-            border-right: 1px solid #ccc;
-            padding: 5px;
-        }
-        </style>
+    # Cabeçalho Visual (Espelho do seu Canva)
+    st.markdown(f"""
+        <div style="text-align: center; border: 2px solid #333; padding: 10px; border-radius: 10px;">
+            <h2 style="margin:0;">Consultório Veterinário Ribeira</h2>
+            <p style="margin:0;">CRVV-RJ 9862 Ricardo Santos</p>
+        </div>
     """, unsafe_allow_html=True)
+    
+    st.write("") # Espaço
 
-    if 'gaveta_aberta' not in st.session_state: st.session_state['gaveta_aberta'] = False
     if 'carrinho' not in st.session_state: st.session_state['carrinho'] = []
 
-    # 1. TABELA DE PRODUTOS (COM GRADE)
-    with st.expander("🔍 TABELA DE PREÇOS", expanded=st.session_state['gaveta_aberta']):
-        st.write("Selecione para adicionar ao caderno:")
+    # Seletor de Itens (Gaveta)
+    with st.expander("🔍 ABRIR TABELA DE PREÇOS"):
         for idx, produto in enumerate(st.session_state['estoque']):
             c1, c2, c3 = st.columns([3, 1, 1])
-            c1.markdown(f"<div class='linha-item'>{produto['Item']}</div>", unsafe_allow_html=True)
-            c2.markdown(f"<div class='linha-item'>R$ {produto['Preco']:.2f}</div>", unsafe_allow_html=True)
-            if c3.button("➕", key=f"add_g_{idx}"):
-                st.session_state['carrinho'].append({"Item": produto['Item'], "Preco": produto['Preco']})
-                st.session_state['gaveta_aberta'] = False 
+            if c3.button("➕", key=f"add_{idx}"):
+                st.session_state['carrinho'].append(produto)
                 st.rerun()
 
-    if not st.session_state['gaveta_aberta']:
-        st.button("🔍 Abrir Tabela de Preços", on_click=lambda: st.session_state.update({"gaveta_aberta": True}))
-
-    st.divider()
-
-    # 2. O ORÇAMENTO (VISUAL DE FOLHA DE CADERNO)
-    if st.session_state['clientes']:
-        t_lista = {c['nome']: c for c in st.session_state['clientes']}
-        t_nome = st.selectbox("Tutor", list(t_lista.keys()))
+    if st.session_state['carrinho']:
+        st.markdown("---")
+        # Grade de Orçamento (Visual das linhas pretas da sua foto)
+        h1, h2, h3 = st.columns([4, 2, 1])
+        h1.markdown("<b style='text-decoration: underline;'>DESCRIÇÃO</b>", unsafe_allow_html=True)
+        h2.markdown("<b style='text-decoration: underline;'>VALOR</b>", unsafe_allow_html=True)
+        h3.write("**X**")
         
-        if st.session_state['carrinho']:
-            # Cabeçalho com Grade
-            h1, h2, h3 = st.columns([4, 2, 1])
-            h1.markdown("<div class='grade-caderno'><b>DESCRIÇÃO</b></div>", unsafe_allow_html=True)
-            h2.markdown("<div class='grade-caderno'><b>VALOR</b></div>", unsafe_allow_html=True)
-            h3.markdown("<div class='grade-caderno'><b>X</b></div>", unsafe_allow_html=True)
-
-            total = 0
-            for i, item in enumerate(st.session_state['carrinho']):
-                col1, col2, col3 = st.columns([4, 2, 1])
-                # Linhas do Orçamento com bordas laterais
-                col1.markdown(f"<div class='linha-item'>{i+1:02d}. {item['Item']}</div>", unsafe_allow_html=True)
-                col2.markdown(f"<div class='linha-item'>R$ {item['Preco']:.2f}</div>", unsafe_allow_html=True)
-                if col3.button("❌", key=f"del_g_{i}"):
-                    st.session_state['carrinho'].pop(i)
-                    st.rerun()
-                total += item['Preco']
-            
-            # Rodapé do Caderno
-            st.markdown(f"<div style='text-align: right; font-size: 20px;'><b>TOTAL: R$ {total:.2f}</b></div>", unsafe_allow_html=True)
-
-            # Botões de WhatsApp e Limpar
-            col_b1, col_b2 = st.columns(2)
-            if col_b1.button("🗑️ Limpar Nota"):
-                st.session_state['carrinho'] = []
+        total = 0
+        for i, item in enumerate(st.session_state['carrinho']):
+            col1, col2, col3 = st.columns([4, 2, 1])
+            # Linha preta horizontal entre os itens
+            col1.markdown(f"<div style='border-bottom: 2px solid black; padding: 5px;'>{i+1:02d}. {item['Item']}</div>", unsafe_allow_html=True)
+            col2.markdown(f"<div style='border-bottom: 2px solid black; padding: 5px;'>R$ {item['Preco']:.2f}</div>", unsafe_allow_html=True)
+            if col3.button("❌", key=f"rem_{i}"):
+                st.session_state['carrinho'].pop(i)
                 st.rerun()
-            if col_b2.button("📲 Enviar WhatsApp"):
-                zap = t_lista[t_nome]['zap']
-
-# =========================================================
-# MÓDULO 5: GESTÃO DE TABELA DE PREÇOS (MODULAR)
+            total += item['Preco']
+            
+        st.markdown(f"<h2 style='text-align: right;'>TOTAL: R$ {total:.2f}</h2>", unsafe_allow_html=True)# =========================================================
+# MÓDULO 5: GESTÃO DE TABELA DE PREÇOS (IMPORTADOR)
 # =========================================================
 elif menu == "⚙️ Tabela de Preços":
     st.subheader("⚙️ Configuração da Tabela de Preços")
     
-    # 1. Cadastro de novos itens (para quando chegar PDF/Excel novo)
+    # OPÇÃO DE IMPORTAR EXCEL OU CSV
+    with st.expander("📂 IMPORTAR TABELA EXTERNA (EXCEL/CSV)"):
+        arquivo = st.file_uploader("Arraste seu arquivo de preços aqui", type=['xlsx', 'csv'])
+        if arquivo:
+            try:
+                # Se for Excel, lê. Se for CSV, lê também.
+                df_novo = pd.read_excel(arquivo) if arquivo.name.endswith('xlsx') else pd.read_csv(arquivo)
+                if st.button("Confirmar Importação de Itens"):
+                    for _, row in df_novo.iterrows():
+                        # Ajuste os nomes 'Item' e 'Preco' conforme sua planilha
+                        st.session_state['estoque'].append({"Item": str(row[0]).upper(), "Preco": float(row[1])})
+                    st.success("Tabela importada com sucesso!")
+                    st.rerun()
+            except Exception as e:
+                st.error("Erro ao ler arquivo. Verifique se a 1ª coluna é o Nome e a 2ª é o Preço.")
+
+    # Formulário Manual (Igual ao anterior)
     with st.form("add_estoque", clear_on_submit=True):
-        st.write("➕ **Adicionar Novo Item à Lista**")
+        st.write("➕ **Adicionar Manualmente**")
         c1, c2 = st.columns([3, 1])
         n_item = c1.text_input("Descrição do Serviço")
-        n_preco = c2.number_input("Preço (R$)", min_value=0.0, step=10.0)
+        n_preco = c2.number_input("Preço (R$)", min_value=0.0)
         if st.form_submit_button("Salvar Item"):
             if n_item:
                 st.session_state['estoque'].append({"Item": n_item.upper(), "Preco": n_preco})
-                st.success("Item adicionado!")
                 st.rerun()
-
-    st.divider()
-
-    # 2. Visualização em Grade (Estilo Caderno)
-    st.write("📋 **Lista de Preços Atual**")
-    
-    # Cabeçalho fixo com bordas
-    h1, h2, h3 = st.columns([4, 2, 1])
-    h1.markdown("<div style='border: 1px solid #333; padding: 5px; background: #f0f2f6; font-weight: bold;'>ITEM</div>", unsafe_allow_html=True)
-    h2.markdown("<div style='border: 1px solid #333; padding: 5px; background: #f0f2f6; font-weight: bold;'>VALOR</div>", unsafe_allow_html=True)
-    h3.markdown("<div style='border: 1px solid #333; padding: 5px; background: #f0f2f6; font-weight: bold;'>X</div>", unsafe_allow_html=True)
-
-    # Linhas com bordas laterais para evitar engavetamento
-    for i, prod in enumerate(st.session_state['estoque']):
-        col1, col2, col3 = st.columns([4, 2, 1])
-        col1.markdown(f"<div style='border-left: 1px solid #ccc; border-right: 1px solid #ccc; border-bottom: 1px solid #eee; padding: 5px;'>{prod['Item']}</div>", unsafe_allow_html=True)
-        col2.markdown(f"<div style='border-right: 1px solid #ccc; border-bottom: 1px solid #eee; padding: 5px;'>R$ {prod['Preco']:.2f}</div>", unsafe_allow_html=True)
-        if col3.button("🗑️", key=f"del_tab_{i}"):
-            st.session_state['estoque'].pop(i)
-            st.rerun()
