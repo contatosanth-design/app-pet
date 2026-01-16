@@ -152,77 +152,104 @@ elif menu == "🩺 Prontuário IA":
         st.info("Nenhum pet cadastrado para atendimento.")
 
 # =========================================================
-# MÓDULO 4: FINANCEIRO (ULTRA-COMPACTO - ESTILO EXCEL)
+# MÓDULO 4: FINANCEIRO (TABELA PROFISSIONAL COMPACTA)
 # =========================================================
 elif menu == "💰 Financeiro":
-    # CSS para forçar a densidade máxima de linhas
+    # CSS para ícones pequenos e tabela sem erros de linha
     st.markdown("""
         <style>
-        .nota-fiscal {
-            font-family: 'Courier New', Courier, monospace;
-            border-collapse: collapse;
+        .tabela-orcamento {
             width: 100%;
+            border-collapse: collapse;
+            font-family: Arial, sans-serif;
+            margin-bottom: 10px;
         }
-        .nota-fiscal td, .nota-fiscal th {
-            border: 1px solid #000;
-            padding: 2px 8px !important; /* Espaço mínimo interno */
-            line-height: 1.1 !important;  /* Altura da linha mínima */
-            font-size: 13px !important;
+        .tabela-orcamento th {
+            border: 1px solid black;
+            background-color: #f2f2f2;
+            padding: 4px;
+            font-size: 13px;
         }
-        .stButton button {
-            padding: 0px 5px !important;
-            height: 25px !important;
+        .tabela-orcamento td {
+            border: 1px solid black;
+            padding: 2px 8px;
+            font-size: 13px;
         }
-        div[data-testid="stVerticalBlock"] > div {
-            margin-top: -10px !important; /* Remove espaço entre blocos do Streamlit */
+        /* Ajuste para botões pequenos */
+        .stButton > button {
+            padding: 0px 2px !important;
+            height: 22px !important;
+            font-size: 12px !important;
         }
         </style>
     """, unsafe_allow_html=True)
 
-    # Cabeçalho compactado
+    # Cabeçalho Profissional
     st.markdown("""
-        <div style="border: 2px solid black; padding: 5px; text-align: center; margin-bottom: 10px;">
-            <b style="font-size: 18px;">CONSULTÓRIO VETERINÁRIO RIBEIRA</b><br>
-            <small>CRVV-RJ 9862 Ricardo Santos</small>
+        <div style="border: 2px solid black; padding: 5px; text-align: center; line-height: 1.2;">
+            <b style="font-size: 16px;">CONSULTÓRIO VETERINÁRIO RIBEIRA</b><br>
+            <span style="font-size: 12px;">CRVV-RJ 9862 Ricardo Santos</span>
         </div>
     """, unsafe_allow_html=True)
+    
+    st.write("") 
 
     if 'carrinho' not in st.session_state: st.session_state['carrinho'] = []
 
-    # Seletor de Itens
-    with st.expander("🔍 TABELA DE PREÇOS"):
+    # Seletor de Itens (Expander)
+    with st.expander("📋 TABELA DE PREÇOS", expanded=st.session_state.get('gaveta_aberta', False)):
         for idx, produto in enumerate(st.session_state['estoque']):
             c1, c2, c3 = st.columns([4, 2, 1])
-            c1.write(f"{produto['Item']}")
+            c1.write(f"**{produto['Item']}**")
             c2.write(f"R$ {produto['Preco']:.2f}")
-            if c3.button("➕", key=f"add_{idx}"):
+            if c3.button("➕", key=f"add_item_{idx}"):
                 st.session_state['carrinho'].append(produto)
+                st.session_state['gaveta_aberta'] = False
                 st.rerun()
 
     if st.session_state['carrinho']:
-        # Tabela compacta "Espelho do Canva"
-        st.markdown("<table class='nota-fiscal'><tr><th>DESCRIÇÃO</th><th style='width:100px'>VALOR</th></tr>", unsafe_allow_html=True)
+        # Criando a Tabela em HTML para evitar cruzamento de linhas
+        html_tabela = """
+        <table class="tabela-orcamento">
+            <tr>
+                <th style="width: 70%;">DESCRIÇÃO</th>
+                <th style="width: 30%;">VALOR</th>
+            </tr>
+        """
         
         total = 0
         for i, item in enumerate(st.session_state['carrinho']):
-            # Criamos as linhas simulando o caderno
-            col1, col2, col3 = st.columns([5, 2, 1])
-            col1.markdown(f"<div style='border: 1px solid black; padding: 2px;'>{i+1:02d}. {item['Item']}</div>", unsafe_allow_html=True)
-            col2.markdown(f"<div style='border: 1px solid black; padding: 2px;'>R$ {item['Preco']:.2f}</div>", unsafe_allow_html=True)
-            if col3.button("❌", key=f"rem_{i}"):
-                st.session_state['carrinho'].pop(i)
-                st.rerun()
+            html_tabela += f"""
+            <tr>
+                <td>{i+1:02d}. {item['Item']}</td>
+                <td style="text-align: right;">R$ {item['Preco']:.2f}</td>
+            </tr>
+            """
             total += item['Preco']
-            
-        st.markdown(f"<div style='text-align: right; border: 2px solid black; padding: 5px; background: #eee;'><b>TOTAL: R$ {total:.2f}</b></div>", unsafe_allow_html=True)
         
-        st.write("")
-        c_btn1, c_btn2 = st.columns(2)
-        if c_btn1.button("🗑️ Limpar"):
+        html_tabela += "</table>"
+        
+        # Exibe a tabela pronta
+        st.markdown(html_tabela, unsafe_allow_html=True)
+
+        # Área de exclusão e Total (Botões alinhados)
+        col_excluir, col_total = st.columns([1, 1])
+        
+        with col_excluir:
+            idx_rem = st.selectbox("Remover item nº:", range(1, len(st.session_state['carrinho'])+1)) if st.session_state['carrinho'] else None
+            if st.button("❌ Remover Selecionado"):
+                st.session_state['carrinho'].pop(idx_rem-1)
+                st.rerun()
+
+        st.markdown(f"<div style='text-align: right; border: 2px solid black; padding: 5px; font-size: 18px;'><b>TOTAL: R$ {total:.2f}</b></div>", unsafe_allow_html=True)
+        
+        st.divider()
+        b_limpar, b_zap = st.columns(2)
+        if b_limpar.button("🗑️ Limpar Tudo"):
             st.session_state['carrinho'] = []
             st.rerun()
-        if c_btn2.button("📲 WhatsApp"):
-            st.info("Link gerado!")        
+        if b_zap.button("📲 WhatsApp"):
+            st.info("Link gerado com sucesso!")       
 # =========================================================
 # MÓDULO 5: GESTÃO DE TABELA DE PREÇOS (IMPORTADOR)
 # =========================================================
