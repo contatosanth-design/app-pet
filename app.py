@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime, date
 import urllib.parse
 
-st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
+st.set_page_config(page_title="Ribeira Vet Pro v7.0", layout="wide")
 
 # 1. Banco de Dados e Itens
 if 'estoque' not in st.session_state:
@@ -22,6 +22,7 @@ for key in ['clientes', 'pets', 'historico']:
 # 2. Menu Lateral
 with st.sidebar:
     st.title("Ribeira Vet Pro")
+    st.info("Versão 7.0 - Estável")
     menu = st.radio("NAVEGAÇÃO", ["🏠 Dashboard", "👤 Tutores", "🐾 Pets", "🩺 Prontuário IA", "💰 Financeiro"])
 
 # --- TUTORES ---
@@ -38,27 +39,24 @@ if menu == "👤 Tutores":
                 st.session_state['clientes'].append({"id": f"T{len(st.session_state['clientes'])+1:03d}", "nome": nome.upper(), "cpf": cpf, "zap": zap, "end": end})
                 st.success("Tutor cadastrado!")
 
-# --- PETS (IDADE DINÂMICA E RAÇAS CORRIGIDAS) ---
+# --- PETS (IDADE DINÂMICA E RAÇAS) ---
 elif menu == "🐾 Pets":
     st.subheader("🐾 Ficha do Paciente")
     if not st.session_state['clientes']:
         st.warning("Cadastre um tutor primeiro.")
     else:
-        # Usamos colunas fora do form para garantir que o Streamlit atualize a idade ao mudar a data
         t_lista = {f"{c['id']} - {c['nome']}": c['nome'] for c in st.session_state['clientes']}
         t_sel = st.selectbox("Proprietário*", list(t_lista.keys()))
         nome_p = st.text_input("Nome do Pet*")
         
         c1, c2, c3 = st.columns(3)
         especie = c1.selectbox("Espécie", ["Cão", "Gato", "Outro"])
-        # Lista de Raças conforme solicitado
         raca = c2.selectbox("Raça", ["SRD", "Pinscher", "Poodle", "Shih Tzu", "Pitbull", "Spitz Alemão", "Buldogue", "Outra"])
         sexo = c3.selectbox("Sexo", ["Macho", "Fêmea"])
         
-        # Idade dinâmica (Correção da imagem image_ccaaca)
         nasc = st.date_input("Data de Nascimento", value=date(2020, 1, 1), format="DD/MM/YYYY")
         hoje = date.today()
-        idade_real = hoje.year - nasc.year - ((hoje.month, hoy.day) < (nasc.month, nasc.day)) if 'nasc' in locals() else 0
+        idade_real = hoje.year - nasc.year - ((hoje.month, hoje.day) < (nasc.month, nasc.day))
         st.info(f"Idade Calculada: {idade_real} anos")
         
         if st.button("✅ Salvar Ficha do Pet"):
@@ -66,21 +64,19 @@ elif menu == "🐾 Pets":
                 st.session_state['pets'].append({"nome": nome_p.upper(), "raca": raca, "idade": idade_real, "tutor": t_lista[t_sel]})
                 st.success("Paciente registrado!")
 
-# --- PRONTUÁRIO IA (TRANSCRIÇÃO) ---
+# --- PRONTUÁRIO IA ---
 elif menu == "🩺 Prontuário IA":
     st.subheader("🩺 Atendimento Clínico")
-    st.markdown("> **PASSO A PASSO PARA DITAR:**\n> 1. Clique dentro da caixa branca abaixo.\n> 2. Pressione **Win+H**.\n> 3. Quando a barra azul aparecer, comece a falar.")
-    
+    st.markdown("> **DICA:** Clique na caixa de texto e use **Win+H** para ditar.")
     if not st.session_state['pets']: st.info("Cadastre um pet.")
     else:
         p_sel = st.selectbox("Selecione o Paciente", [p['nome'] for p in st.session_state['pets']])
-        relato = st.text_area("Relato da Consulta (Clique aqui antes de falar)", height=300, placeholder="O texto ditado aparecerá aqui...")
-        
+        relato = st.text_area("Relato da Consulta (Clique aqui antes de falar)", height=300)
         if st.button("💾 Salvar Atendimento"):
             st.session_state['historico'].append({"Data": date.today().strftime("%d/%m/%Y"), "Pet": p_sel, "Relato": relato})
             st.success("Histórico atualizado!")
 
-# --- FINANCEIRO (RECIBO DETALHADO) ---
+# --- FINANCEIRO ---
 elif menu == "💰 Financeiro":
     st.subheader("💰 Fechamento de Conta")
     if st.session_state['clientes']:
