@@ -60,7 +60,7 @@ if menu == "🏠 Dashboard":
         st.info("Nenhum atendimento hoje. A lista aparecerá aqui após usar o Prontuário.")
 
 # =========================================================
-# MÓDULO 1: TUTORES
+# MÓDULO 1: TUTORES (VERSÃO CORRIGIDA COM E-MAIL)
 # =========================================================
 elif menu == "👤 Tutores":
     st.subheader("📝 Cadastro de Tutores")
@@ -69,11 +69,22 @@ elif menu == "👤 Tutores":
         c1, c2 = st.columns(2)
         cpf = c1.text_input("CPF")
         zap = c2.text_input("WhatsApp*")
+        
+        # Campo de E-mail recuperado da Versão 7.0
+        email = st.text_input("E-mail para Boletas e Promoções") 
+        
         end = st.text_area("Endereço Completo")
         if st.form_submit_button("Salvar Tutor"):
             if nome and zap:
-                st.session_state['clientes'].append({"id": f"T{len(st.session_state['clientes'])+1:03d}", "nome": nome.upper(), "cpf": cpf, "zap": zap, "end": end})
-                st.success("Tutor cadastrado!")
+                st.session_state['clientes'].append({
+                    "id": f"T{len(st.session_state['clientes'])+1:03d}", 
+                    "nome": nome.upper(), 
+                    "cpf": cpf, 
+                    "zap": zap, 
+                    "email": email, # Salvando o e-mail na ficha do cliente
+                    "end": end
+                })
+                st.success(f"Tutor {nome.upper()} cadastrado com sucesso!")
 
 # =========================================================
 # MÓDULO 2: PETS
