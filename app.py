@@ -152,74 +152,83 @@ elif menu == "🩺 Prontuário IA":
         st.info("Nenhum pet cadastrado para atendimento.")
 
 # =========================================================
-# MÓDULO 4: FINANCEIRO (LIMPO E SEM ENGAVETAMENTO)
+# MÓDULO 4: FINANCEIRO (VISUAL GRADE DE CADERNO)
 # =========================================================
 elif menu == "💰 Financeiro":
-    st.subheader("💰 Orçamento Rápido")
+    st.subheader("💰 Orçamento com Grade")
+
+    # Truque de CSS para desenhar as bordas das colunas (Grade)
+    st.markdown("""
+        <style>
+        .grade-caderno {
+            border: 1px solid #ccc;
+            padding: 5px;
+            text-align: center;
+            background-color: #f9f9f9;
+        }
+        .linha-item {
+            border-bottom: 1px solid #eee;
+            border-left: 1px solid #ccc;
+            border-right: 1px solid #ccc;
+            padding: 5px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
     if 'gaveta_aberta' not in st.session_state: st.session_state['gaveta_aberta'] = False
     if 'carrinho' not in st.session_state: st.session_state['carrinho'] = []
 
-    # 1. ESCOLHA DE PRODUTOS (GAVETA)
-    with st.expander("🔍 CLIQUE PARA VER A TABELA DE PREÇOS", expanded=st.session_state['gaveta_aberta']):
-        st.write("Selecione o item para adicionar ao caderno:")
+    # 1. TABELA DE PRODUTOS (COM GRADE)
+    with st.expander("🔍 TABELA DE PREÇOS", expanded=st.session_state['gaveta_aberta']):
+        st.write("Selecione para adicionar ao caderno:")
         for idx, produto in enumerate(st.session_state['estoque']):
             c1, c2, c3 = st.columns([3, 1, 1])
-            c1.write(f"**{produto['Item']}**")
-            c2.write(f"R$ {produto['Preco']:.2f}")
-            if c3.button("➕", key=f"add_item_{idx}"):
+            c1.markdown(f"<div class='linha-item'>{produto['Item']}</div>", unsafe_allow_html=True)
+            c2.markdown(f"<div class='linha-item'>R$ {produto['Preco']:.2f}</div>", unsafe_allow_html=True)
+            if c3.button("➕", key=f"add_g_{idx}"):
                 st.session_state['carrinho'].append({"Item": produto['Item'], "Preco": produto['Preco']})
                 st.session_state['gaveta_aberta'] = False 
                 st.rerun()
 
-    # Botão simples para reabrir a lista sem poluir a tela
     if not st.session_state['gaveta_aberta']:
-        st.button("🔍 Adicionar Itens", on_click=lambda: st.session_state.update({"gaveta_aberta": True}))
+        st.button("🔍 Abrir Tabela de Preços", on_click=lambda: st.session_state.update({"gaveta_aberta": True}))
 
     st.divider()
 
-    # 2. O ORÇAMENTO (VISUAL DE CADERNO ORGANIZADO)
+    # 2. O ORÇAMENTO (VISUAL DE FOLHA DE CADERNO)
     if st.session_state['clientes']:
         t_lista = {c['nome']: c for c in st.session_state['clientes']}
-        t_nome = st.selectbox("Cliente", list(t_lista.keys()))
+        t_nome = st.selectbox("Tutor", list(t_lista.keys()))
         
         if st.session_state['carrinho']:
-            st.write("### 📝 Caderno de Orçamentos")
-            
-            # Criamos uma tabela organizada para evitar o engavetamento
-            total_geral = 0
-            
-            # Cabeçalho Fixo
-            st.markdown("---")
-            col_cab1, col_cab2, col_cab3 = st.columns([4, 2, 1])
-            col_cab1.write("**DESCRIÇÃO**")
-            col_cab2.write("**VALOR**")
-            col_cab3.write("**X**")
-            st.markdown("---")
+            # Cabeçalho com Grade
+            h1, h2, h3 = st.columns([4, 2, 1])
+            h1.markdown("<div class='grade-caderno'><b>DESCRIÇÃO</b></div>", unsafe_allow_html=True)
+            h2.markdown("<div class='grade-caderno'><b>VALOR</b></div>", unsafe_allow_html=True)
+            h3.markdown("<div class='grade-caderno'><b>X</b></div>", unsafe_allow_html=True)
 
-            # Linhas do Orçamento (Simulando o Excel)
+            total = 0
             for i, item in enumerate(st.session_state['carrinho']):
-                c_desc, c_val, c_del = st.columns([4, 2, 1])
-                c_desc.write(f"{i+1:02d}. {item['Item']}")
-                c_val.write(f"R$ {item['Preco']:.2f}")
-                if c_del.button("❌", key=f"del_fin_{i}"):
+                col1, col2, col3 = st.columns([4, 2, 1])
+                # Linhas do Orçamento com bordas laterais
+                col1.markdown(f"<div class='linha-item'>{i+1:02d}. {item['Item']}</div>", unsafe_allow_html=True)
+                col2.markdown(f"<div class='linha-item'>R$ {item['Preco']:.2f}</div>", unsafe_allow_html=True)
+                if col3.button("❌", key=f"del_g_{i}"):
                     st.session_state['carrinho'].pop(i)
                     st.rerun()
-                total_geral += item['Preco']
+                total += item['Preco']
             
-            st.divider()
-            st.markdown(f"## **TOTAL: R$ {total_geral:.2f}**")
+            # Rodapé do Caderno
+            st.markdown(f"<div style='text-align: right; font-size: 20px;'><b>TOTAL: R$ {total:.2f}</b></div>", unsafe_allow_html=True)
 
-            # Botões de Ação Final
-            b1, b2 = st.columns(2)
-            if b1.button("🗑️ Limpar Nota"):
+            # Botões de WhatsApp e Limpar
+            col_b1, col_b2 = st.columns(2)
+            if col_b1.button("🗑️ Limpar Nota"):
                 st.session_state['carrinho'] = []
                 st.rerun()
-            if b2.button("📲 WhatsApp"):
+            if col_b2.button("📲 Enviar WhatsApp"):
                 zap = t_lista[t_nome]['zap']
-                resumo = "\n".join([f"- {it['Item']}: R$ {it['Preco']:.2f}" for it in st.session_state['carrinho']])
-                msg = f"Orçamento Ribeira Vet para {t_nome}:\n\n{resumo}\n\n*Total: R$ {total_geral:.2f}*"
+                resumo = "\n".join([f"{it['Item']}: R$ {it['Preco']:.2f}" for it in st.session_state['carrinho']])
+                msg = f"Orçamento Ribeira Vet:\n{resumo}\nTotal: R$ {total:.2f}"
                 link = f"https://wa.me/{zap}?text={urllib.parse.quote(msg)}"
-                st.markdown(f"#### [👉 Enviar pelo WhatsApp]({link})")
-        else:
-            st.info("O orçamento está vazio. Use o botão acima para adicionar produtos.")
+                st.markdown(f"#### [Clique para Enviar]({link})")
