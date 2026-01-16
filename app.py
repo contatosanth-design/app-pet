@@ -228,6 +228,56 @@ elif menu == "💰 Financeiro":
                 st.rerun()
             if col_b2.button("📲 Enviar WhatsApp"):
                 zap = t_lista[t_nome]['zap']
+
+                # =========================================================
+# MÓDULO 5: GESTÃO DE TABELA DE PREÇOS (ESTOQUE)
+# =========================================================
+elif menu == "⚙️ Tabela de Preços":
+    st.subheader("⚙️ Gerenciar Tabela de Serviços e Preços")
+    
+    # CSS para manter o padrão de grade
+    st.markdown("""
+        <style>
+        .grade-estoque { border: 1px solid #ccc; padding: 8px; background-color: #f0f2f6; font-weight: bold; }
+        .linha-estoque { border-bottom: 1px solid #eee; border-left: 1px solid #ccc; border-right: 1px solid #ccc; padding: 8px; }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # 1. FORMULÁRIO PARA NOVO ITEM
+    with st.form("novo_produto", clear_on_submit=True):
+        st.write("➕ **Adicionar Novo Item à Tabela**")
+        c1, c2 = st.columns([3, 1])
+        n_item = c1.text_input("Nome do Serviço ou Produto (ex: Vacina, Simparic...)")
+        n_preco = c2.number_input("Preço de Venda (R$)", min_value=0.0, step=1.0)
+        if st.form_submit_button("Salvar na Tabela"):
+            if n_item:
+                st.session_state['estoque'].append({"Item": n_item.upper(), "Preco": n_preco})
+                st.success(f"{n_item} adicionado com sucesso!")
+                st.rerun()
+
+    st.divider()
+
+    # 2. LISTA ATUAL COM GRADE (IGUAL AO EXCEL)
+    st.write("📋 **Itens Cadastrados Atualmente**")
+    
+    # Cabeçalho da Grade
+    h1, h2, h3 = st.columns([4, 2, 1])
+    h1.markdown("<div class='grade-estoque'>DESCRIÇÃO</div>", unsafe_allow_html=True)
+    h2.markdown("<div class='grade-estoque'>PREÇO</div>", unsafe_allow_html=True)
+    h3.markdown("<div class='grade-estoque'>AÇÃO</div>", unsafe_allow_html=True)
+
+    itens_para_excluir = -1
+    for i, prod in enumerate(st.session_state['estoque']):
+        col1, col2, col3 = st.columns([4, 2, 1])
+        col1.markdown(f"<div class='linha-estoque'>{prod['Item']}</div>", unsafe_allow_html=True)
+        col2.markdown(f"<div class='linha-estoque'>R$ {prod['Preco']:.2f}</div>", unsafe_allow_html=True)
+        if col3.button("🗑️", key=f"del_prod_{i}"):
+            itens_para_excluir = i
+
+    # Processa a exclusão
+    if itens_para_excluir != -1:
+        st.session_state['estoque'].pop(itens_para_excluir)
+        st.rerun()
                 resumo = "\n".join([f"{it['Item']}: R$ {it['Preco']:.2f}" for it in st.session_state['carrinho']])
                 msg = f"Orçamento Ribeira Vet:\n{resumo}\nTotal: R$ {total:.2f}"
                 link = f"https://wa.me/{zap}?text={urllib.parse.quote(msg)}"
