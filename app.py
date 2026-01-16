@@ -152,73 +152,70 @@ elif menu == "🩺 Prontuário IA":
         st.info("Nenhum pet cadastrado para atendimento.")
 
 # =========================================================
-# MÓDULO 4: FINANCEIRO (ESTÁVEL - VERSÃO CARRINHO)
+# MÓDULO 4: FINANCEIRO (FECHAMENTO AUTOMÁTICO)
 # =========================================================
 elif menu == "💰 Financeiro":
     st.subheader("💰 Orçamento e Venda Rápida")
 
-    # Inicializa o carrinho na memória se estiver vazio
+    # Inicializa o estado da gaveta (aberta por padrão na primeira vez)
+    if 'gaveta_aberta' not in st.session_state:
+        st.session_state['gaveta_aberta'] = False
     if 'carrinho' not in st.session_state:
         st.session_state['carrinho'] = []
 
-    # 1. GAVETA DE PRODUTOS (O seu "Pop-up" clicável)
-    with st.expander("📋 ABRIR TABELA DE PREÇOS (CLIQUE NO ➕ PARA ADICIONAR)"):
-        st.write("Consulte e selecione os itens para a nota:")
+    # 1. GAVETA DE PRODUTOS COM CONTROLE DE ESTADO
+    # O parâmetro 'expanded' faz a mágica de abrir ou fechar via código
+    with st.expander("📋 ABRIR TABELA DE PREÇOS", expanded=st.session_state['gaveta_aberta']):
+        st.write("Selecione um item para adicionar ao orçamento:")
         
-        # Criamos as colunas para organizar a visualização
         for idx, produto in enumerate(st.session_state['estoque']):
             c1, c2, c3 = st.columns([3, 1, 1])
             c1.write(f"**{produto['Item']}**")
             c2.write(f"R$ {produto['Preco']:.2f}")
             
-            # Botão de adição rápida (O 'clique' que o senhor pediu)
-            if c3.button("➕", key=f"btn_add_{idx}"):
+            if c3.button("➕", key=f"add_auto_{idx}"):
+                # Adiciona ao carrinho
                 st.session_state['carrinho'].append({
                     "Item": produto['Item'], 
                     "Preco": produto['Preco']
                 })
-                st.toast(f"{produto['Item']} adicionado!") # Aviso rápido
+                # Manda fechar a gaveta no próximo recarregamento
+                st.session_state['gaveta_aberta'] = False 
+                st.rerun()
+
+    # Botão para reabrir a gaveta se precisar de mais itens
+    if not st.session_state['gaveta_aberta']:
+        if st.button("🔍 Adicionar mais itens"):
+            st.session_state['gaveta_aberta'] = True
+            st.rerun()
 
     st.divider()
 
-    # 2. ÁREA DO RECIBO (ONDE APARECEM OS ITENS CLICADOS)
+    # 2. VISUALIZAÇÃO DO ORÇAMENTO (O senhor cairá aqui após o clique)
     if not st.session_state['clientes']:
         st.warning("Cadastre um tutor primeiro.")
     else:
         t_lista = {c['nome']: c for c in st.session_state['clientes']}
-        t_nome = st.selectbox("Selecione o Tutor para a Nota", list(t_lista.keys()))
+        t_nome = st.selectbox("Tutor", list(t_lista.keys()))
         
         if st.session_state['carrinho']:
-            st.markdown("### 📄 Itens Selecionados")
-            total_geral = 0
-            
-            # Exibe os itens e permite remover um a um
+            st.markdown("### 📄 Orçamento Atual")
+            total = 0
             for i, item in enumerate(st.session_state['carrinho']):
                 col_i, col_v, col_x = st.columns([3, 1, 1])
                 col_i.write(f"🔹 {item['Item']}")
                 col_v.write(f"R$ {item['Preco']:.2f}")
                 
-                # Botão para retirar da nota se o senhor desistir
-                if col_x.button("❌", key=f"btn_rem_{i}"):
+                if col_x.button("❌", key=f"del_{i}"):
                     st.session_state['carrinho'].pop(i)
                     st.rerun()
-                
-                total_geral += item['Preco']
+                total += item['Preco']
 
-            st.divider()
-            st.markdown(f"## **VALOR TOTAL: R$ {total_geral:.2f}**")
+            st.markdown(f"## **TOTAL: R$ {total:.2f}**")
 
-            # Ações Finais
-            col_fim1, col_fim2 = st.columns(2)
-            if col_fim1.button("🗑️ Limpar Toda a Nota"):
-                st.session_state['carrinho'] = []
-                st.rerun()
-
-            if col_fim2.button("📲 Gerar Recibo WhatsApp"):
+            if st.button("📲 Enviar para WhatsApp"):
                 zap = t_lista[t_nome]['zap']
                 resumo = "\n".join([f"- {it['Item']}: R$ {it['Preco']:.2f}" for it in st.session_state['carrinho']])
-                msg = f"Olá {t_nome}, segue orçamento da Ribeira Vet:\n\n{resumo}\n\n*Total: R$ {total_geral:.2f}*"
+                msg = f"Olá {t_nome}, orçamento Ribeira Vet:\n\n{resumo}\n\n*Total: R$ {total:.2f}*"
                 link = f"https://wa.me/{zap}?text={urllib.parse.quote(msg)}"
-                st.markdown(f"#### [👉 Clique para Enviar via WhatsApp]({link})")
-        else:
-            st.info("O orçamento está vazio. Abra a tabela acima para adicionar itens clicando no ➕.")
+                st.markdown(f"#### [👉 Clique para Enviar]({link})")
