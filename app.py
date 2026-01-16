@@ -23,23 +23,57 @@ with st.sidebar:
     st.info("Versão 7.0 - Estável")
     menu = st.sidebar.radio("NAVEGAÇÃO", ["👤 Tutores", "🐾 Pets", "📋 Prontuário IA", "💰 Financeiro"])
 
-# MÓDULO 1: TUTORES (ESTÁVEL)
-if menu == "👤 Tutores":
+# =========================================================
+# MÓDULO 1: TUTORES (COM CPF E BUSCA SIMPLIFICADA)
+# =========================================================
+elif menu == "👤 Tutores":
     st.subheader("👤 Cadastro de Tutores")
-    with st.form("form_tutor_v7"):
+
+    # BARRA DE BUSCA (Aparece no topo para facilitar)
+    busca = st.text_input("🔍 Buscar Cliente Cadastrado:")
+    if busca:
+        resultados = [c for c in st.session_state['clientes'] if busca.upper() in c['NOME']]
+        if resultados:
+            st.write("🎯 **Resultado da Busca:**")
+            st.table(pd.DataFrame(resultados))
+        else:
+            st.warning("Cliente não encontrado.")
+
+    st.divider()
+
+    # FORMULÁRIO COM CPF
+    with st.form("form_tutor_atualizado"):
         c1, c2 = st.columns([3, 1])
         nome = c1.text_input("Nome Completo *")
         zap = c2.text_input("Telefone")
+        
+        c3, c4 = st.columns([1, 1])
+        cpf = c3.text_input("CPF (Opcional)")
+        email = c4.text_input("E-mail")
+        
         end = st.text_input("Endereço Completo")
+        
         if st.form_submit_button("Salvar Cadastro"):
             if nome:
-                st.session_state['clientes'].append({"NOME": nome.upper(), "TEL": zap, "ENDEREÇO": end})
-                st.success("Tutor cadastrado!")
+                novo_cliente = {
+                    "NOME": nome.upper(), 
+                    "CPF": cpf if cpf else "---",
+                    "TEL": zap, 
+                    "ENDEREÇO": end,
+                    "E-MAIL": email
+                }
+                st.session_state['clientes'].append(novo_cliente)
+                # Organiza em ordem alfabética automaticamente
+                st.session_state['clientes'] = sorted(st.session_state['clientes'], key=lambda x: x['NOME'])
+                st.success("Tutor cadastrado com sucesso!")
                 st.rerun()
 
+    # LISTA GERAL ABAIXO
     if st.session_state['clientes']:
-        st.table(pd.DataFrame(st.session_state['clientes']))
-
+        st.write("📋 **Lista Geral de Clientes**")
+        df_exibir = pd.DataFrame(st.session_state['clientes'])
+        df_exibir.index = [f"{i+1:02d}" for i in range(len(df_exibir))]
+        st.table(df_exibir)
 # MÓDULO 2: PETS (CORRIGIDO)
 elif menu == "🐾 Pets":
     st.subheader("🐾 Gestão de Pacientes")
