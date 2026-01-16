@@ -1,117 +1,90 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 
-# CONFIGURAÇÃO INICIAL
-st.set_page_config(page_title="Ribeira Vet Pro v7.0", layout="wide")
+# 1. CONFIGURAÇÃO E BANCO DE DADOS
+st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
 
-# BANCO DE DATOS (MEMÓRIA)
 if 'clientes' not in st.session_state: st.session_state['clientes'] = []
 if 'pets' not in st.session_state: st.session_state['pets'] = []
 if 'carrinho' not in st.session_state: st.session_state['carrinho'] = []
 if 'estoque' not in st.session_state:
     st.session_state['estoque'] = [
-        {"Item": "VACINA V10 (IMPORTADA)", "Preco": 120.0},
-        {"Item": "VACINA ANTIRRÁBICA", "Preco": 60.0},
         {"Item": "CONSULTA CLÍNICA", "Preco": 150.0},
-        {"Item": "HEMOGRAMA COMPLETO", "Preco": 95.0},
-        {"Item": "CASTRAÇÃO MACHO", "Preco": 350.0}
+        {"Item": "VACINA V10", "Preco": 120.0},
+        {"Item": "VACINA ANTIRRÁBICA", "Preco": 60.0}
     ]
 
-# MENU LATERAL
+# 2. MENU LATERAL
 with st.sidebar:
     st.title("Ribeira Vet Pro")
-    st.info("Versão 7.0 - Estável")
-    menu = st.sidebar.radio("NAVEGAÇÃO", ["👤 Tutores", "🐾 Pets", "📋 Prontuário IA", "💰 Financeiro"])
+    menu = st.radio("NAVEGAÇÃO", ["👤 Tutores", "🐾 Pets", "📋 Prontuário IA", "💰 Financeiro"])
 
-# =========================================================
-# MÓDULO 1: TUTORES (COM CPF E BUSCA SIMPLIFICADA)
-# =========================================================
-elif menu == "👤 Tutores":
-    st.subheader("👤 Cadastro de Tutores")
-
-    # BARRA DE BUSCA (Aparece no topo para facilitar)
-    busca = st.text_input("🔍 Buscar Cliente Cadastrado:")
+# 3. MÓDULO 1: TUTORES (COM CPF E BUSCA)
+if menu == "👤 Tutores":
+    st.subheader("👤 Gestão de Clientes")
+    
+    # Busca por nome
+    busca = st.text_input("🔍 Buscar Cliente:")
     if busca:
-        resultados = [c for c in st.session_state['clientes'] if busca.upper() in c['NOME']]
-        if resultados:
-            st.write("🎯 **Resultado da Busca:**")
-            st.table(pd.DataFrame(resultados))
-        else:
-            st.warning("Cliente não encontrado.")
+        res = [c for c in st.session_state['clientes'] if busca.upper() in c['NOME']]
+        if res: st.table(pd.DataFrame(res))
 
-    st.divider()
-
-    # FORMULÁRIO COM CPF
-    with st.form("form_tutor_atualizado"):
+    with st.form("form_tutor_v12", clear_on_submit=True):
         c1, c2 = st.columns([3, 1])
         nome = c1.text_input("Nome Completo *")
         zap = c2.text_input("Telefone")
-        
         c3, c4 = st.columns([1, 1])
-        cpf = c3.text_input("CPF (Opcional)")
+        cpf = c3.text_input("CPF")
         email = c4.text_input("E-mail")
-        
         end = st.text_input("Endereço Completo")
-        
-        if st.form_submit_button("Salvar Cadastro"):
+        if st.form_submit_button("💾 Salvar Cadastro"):
             if nome:
-                novo_cliente = {
-                    "NOME": nome.upper(), 
-                    "CPF": cpf if cpf else "---",
-                    "TEL": zap, 
-                    "ENDEREÇO": end,
-                    "E-MAIL": email
-                }
-                st.session_state['clientes'].append(novo_cliente)
-                # Organiza em ordem alfabética automaticamente
+                novo = {"NOME": nome.upper(), "CPF": cpf, "TEL": zap, "ENDEREÇO": end, "E-MAIL": email}
+                st.session_state['clientes'].append(novo)
                 st.session_state['clientes'] = sorted(st.session_state['clientes'], key=lambda x: x['NOME'])
-                st.success("Tutor cadastrado com sucesso!")
                 st.rerun()
 
-    # LISTA GERAL ABAIXO
     if st.session_state['clientes']:
-        st.write("📋 **Lista Geral de Clientes**")
-        df_exibir = pd.DataFrame(st.session_state['clientes'])
-        df_exibir.index = [f"{i+1:02d}" for i in range(len(df_exibir))]
-        st.table(df_exibir)
-# MÓDULO 2: PETS (CORRIGIDO)
+        df_t = pd.DataFrame(st.session_state['clientes'])
+        df_t.index = [f"{i+1:02d}" for i in range(len(df_t))]
+        st.table(df_t)
+
+# 4. MÓDULO 2: PETS
 elif menu == "🐾 Pets":
     st.subheader("🐾 Gestão de Pacientes")
-    with st.form("form_pet_v7"):
+    with st.form("form_pet_v12"):
         c1, c2 = st.columns([3, 1])
-        nome_p = c1.text_input("Nome do Pet *")
+        n_pet = c1.text_input("Nome do Pet *")
         esp = c2.selectbox("Espécie", ["Cão", "Gato", "Outro"])
         rac = st.text_input("Raça")
-        if st.form_submit_button("Salvar Pet"):
-            if nome_p:
-                st.session_state['pets'].append({"PET": nome_p.upper(), "ESPÉCIE": esp, "RAÇA": rac})
-                st.success("Pet cadastrado!")
+        if st.form_submit_button("💾 Salvar Pet"):
+            if n_pet:
+                st.session_state['pets'].append({"PET": n_pet.upper(), "ESPÉCIE": esp, "RAÇA": rac})
                 st.rerun()
     if st.session_state['pets']:
         st.table(pd.DataFrame(st.session_state['pets']))
 
-# MÓDULO 4: FINANCEIRO (PREÇOS FORMATADOS)
+# 5. MÓDULO 4: FINANCEIRO (FORMATADO)
 elif menu == "💰 Financeiro":
-    st.markdown("""<div style='border: 2px solid black; padding: 10px; text-align: center;'>
-                <b>CONSULTÓRIO VETERINÁRIO RIBEIRA</b><br>CRVV-RJ 9862 Ricardo Santos</div>""", unsafe_allow_html=True)
-    
+    st.markdown("<div style='border:2px solid black;padding:10px;text-align:center;'><b>CONSULTÓRIO RIBEIRA</b></div>", unsafe_allow_html=True)
     with st.expander("🔍 TABELA DE PREÇOS"):
-        for idx, item in enumerate(st.session_state['estoque']):
+        for i, p in enumerate(st.session_state['estoque']):
             c1, c2, c3 = st.columns([3, 1, 1])
-            c1.write(item['Item'])
-            c2.write(f"R$ {item['Preco']:.2f}")
-            if c3.button("➕", key=f"add_{idx}"):
-                st.session_state['carrinho'].append(item)
+            c1.write(p['Item'])
+            c2.write(f"R$ {p['Preco']:.2f}")
+            if c3.button("➕", key=f"btn_{i}"):
+                st.session_state['carrinho'].append(p)
                 st.rerun()
-
     if st.session_state['carrinho']:
-        st.write("### 📝 Orçamento Atual")
         df_c = pd.DataFrame(st.session_state['carrinho'])
         df_c['Preco'] = df_c['Preco'].map('R$ {:,.2f}'.format)
         st.table(df_c.rename(columns={'Item': 'DESCRIÇÃO', 'Preco': 'VALOR'}))
-        
-        total = sum(i['Preco'] for i in st.session_state['carrinho'])
-        st.write(f"**TOTAL: R$ {total:.2f}**")
         if st.button("🗑️ Limpar"):
             st.session_state['carrinho'] = []
             st.rerun()
+
+# 6. MÓDULO 3: PRONTUÁRIO
+else:
+    st.subheader("📋 Prontuário (Ditado: Win+H)")
+    st.text_area("Relato Clínico:", height=300)
