@@ -152,70 +152,79 @@ elif menu == "🩺 Prontuário IA":
         st.info("Nenhum pet cadastrado para atendimento.")
 
 # =========================================================
-# MÓDULO 4: FINANCEIRO (FECHAMENTO AUTOMÁTICO)
+# MÓDULO 4: FINANCEIRO (ESTILO CADERNO + FECHAMENTO AUTO)
 # =========================================================
 elif menu == "💰 Financeiro":
     st.subheader("💰 Orçamento e Venda Rápida")
 
-    # Inicializa o estado da gaveta (aberta por padrão na primeira vez)
+    # Controle da gaveta e do carrinho
     if 'gaveta_aberta' not in st.session_state:
         st.session_state['gaveta_aberta'] = False
     if 'carrinho' not in st.session_state:
         st.session_state['carrinho'] = []
 
-    # 1. GAVETA DE PRODUTOS COM CONTROLE DE ESTADO
-    # O parâmetro 'expanded' faz a mágica de abrir ou fechar via código
-    with st.expander("📋 ABRIR TABELA DE PREÇOS", expanded=st.session_state['gaveta_aberta']):
-        st.write("Selecione um item para adicionar ao orçamento:")
-        
+    # 1. GAVETA DE PRODUTOS (FECHA APÓS CLIQUE)
+    with st.expander("🔍 ABRIR TABELA DE PREÇOS", expanded=st.session_state['gaveta_aberta']):
+        st.write("Clique no ➕ para enviar ao caderno de orçamento:")
         for idx, produto in enumerate(st.session_state['estoque']):
             c1, c2, c3 = st.columns([3, 1, 1])
             c1.write(f"**{produto['Item']}**")
             c2.write(f"R$ {produto['Preco']:.2f}")
-            
-            if c3.button("➕", key=f"add_auto_{idx}"):
-                # Adiciona ao carrinho
+            if c3.button("➕", key=f"add_cad_{idx}"):
                 st.session_state['carrinho'].append({
                     "Item": produto['Item'], 
                     "Preco": produto['Preco']
                 })
-                # Manda fechar a gaveta no próximo recarregamento
+                # Força o fechamento da gaveta para liberar a visão
                 st.session_state['gaveta_aberta'] = False 
                 st.rerun()
 
-    # Botão para reabrir a gaveta se precisar de mais itens
+    # Botão de atalho para reabrir a lista rapidamente
     if not st.session_state['gaveta_aberta']:
-        if st.button("🔍 Adicionar mais itens"):
+        if st.button("➕ Adicionar outro item da tabela"):
             st.session_state['gaveta_aberta'] = True
             st.rerun()
 
     st.divider()
 
-    # 2. VISUALIZAÇÃO DO ORÇAMENTO (O senhor cairá aqui após o clique)
-    if not st.session_state['clientes']:
-        st.warning("Cadastre um tutor primeiro.")
-    else:
+    # 2. VISUAL DE CADERNO (CONFORME MODELO ENVIADO)
+    if st.session_state['clientes']:
         t_lista = {c['nome']: c for c in st.session_state['clientes']}
-        t_nome = st.selectbox("Tutor", list(t_lista.keys()))
+        t_nome = st.selectbox("Cliente / Tutor", list(t_lista.keys()))
         
         if st.session_state['carrinho']:
-            st.markdown("### 📄 Orçamento Atual")
-            total = 0
+            st.write("### 📝 Orçamento de Produtos e Serviços")
+            
+            # Criando a estrutura de colunas do caderno
+            df_caderno = pd.DataFrame(st.session_state['carrinho'])
+            
+            # Exibição organizada em linhas
+            total_geral = 0
             for i, item in enumerate(st.session_state['carrinho']):
-                col_i, col_v, col_x = st.columns([3, 1, 1])
-                col_i.write(f"🔹 {item['Item']}")
-                col_v.write(f"R$ {item['Preco']:.2f}")
-                
-                if col_x.button("❌", key=f"del_{i}"):
+                col_desc, col_val, col_del = st.columns([4, 2, 1])
+                col_desc.write(f"_{i+1:02d}_ | {item['Item']}")
+                col_val.write(f"R$ {item['Preco']:.2f}")
+                if col_del.button("❌", key=f"del_item_{i}"):
                     st.session_state['carrinho'].pop(i)
                     st.rerun()
-                total += item['Preco']
+                total_geral += item['Preco']
+                st.markdown("---") # Linha divisória do caderno
 
-            st.markdown(f"## **TOTAL: R$ {total:.2f}**")
-
-            if st.button("📲 Enviar para WhatsApp"):
+            # Rodapé do Caderno
+            st.markdown(f"### **VALOR TOTAL: R$ {total_geral:.2f}**")
+            
+            c_zap1, c_zap2 = st.columns(2)
+            if c_zap1.button("🗑️ Limpar Tudo"):
+                st.session_state['carrinho'] = []
+                st.rerun()
+                
+            if c_zap2.button("📲 WhatsApp"):
                 zap = t_lista[t_nome]['zap']
-                resumo = "\n".join([f"- {it['Item']}: R$ {it['Preco']:.2f}" for it in st.session_state['carrinho']])
-                msg = f"Olá {t_nome}, orçamento Ribeira Vet:\n\n{resumo}\n\n*Total: R$ {total:.2f}*"
+                resumo = "\n".join([f"{it['Item']}: R$ {it['Preco']:.2f}" for it in st.session_state['carrinho']])
+                msg = f"Orçamento Ribeira Vet para {t_nome}:\n\n{resumo}\n\n*Total: R$ {total_geral:.2f}*"
                 link = f"https://wa.me/{zap}?text={urllib.parse.quote(msg)}"
-                st.markdown(f"#### [👉 Clique para Enviar]({link})")
+                st.markdown(f"#### [Clique para Enviar]({link})")
+        else:
+            st.info("O seu caderno de orçamento está vazio.")
+    else:
+        st.warning("Cadastre um tutor primeiro.")
