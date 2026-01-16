@@ -60,50 +60,51 @@ if menu == "🏠 Dashboard":
         st.info("Nenhum atendimento hoje. A lista aparecerá aqui após usar o Prontuário.")
 
 # =========================================================
-# MÓDULO 1: CADASTRO DE TUTORES (VERSÃO FINAL)
+# MÓDULO 1: TUTORES (DISTRIBUIÇÃO DE ESPAÇO OTIMIZADA)
 # =========================================================
 elif menu == "👤 Tutores":
     st.subheader("👤 Gestão de Clientes")
 
-    with st.form("form_tutor_v2", clear_on_submit=True):
-        col_n1, col_n2 = st.columns([2, 1])
-        nome = col_n1.text_input("Nome Completo (Obrigatório) *")
-        zap = col_n2.text_input("WhatsApp (Opcional)")
+    with st.form("form_tutor_v3", clear_on_submit=True):
+        # Primeira Linha: Nome e Telefone (conforme sua imagem)
+        c1, c2 = st.columns([3, 1])
+        nome = c1.text_input("Nome Completo (Obrigatório) *")
+        zap = c2.text_input("Telefone/WhatsApp")
         
+        # Segunda Linha: Endereço (espaço total para endereços longos)
         endereco = st.text_input("Endereço Completo (Opcional)")
+        
+        # Terceira Linha: E-mail (opcional)
         email = st.text_input("E-mail (Opcional)")
         
         if st.form_submit_button("💾 Salvar Cadastro"):
             if nome:
                 novo_tutor = {
                     "NOME": nome.upper(),
-                    "WHATSAPP": zap if zap else "---",
+                    "TEL": zap if zap else "---",
                     "ENDEREÇO": endereco if endereco else "---",
                     "E-MAIL": email if email else "---"
                 }
                 st.session_state['clientes'].append(novo_tutor)
-                # Ordena a lista por nome automaticamente
+                # Reorganiza em Ordem Alfabética
                 st.session_state['clientes'] = sorted(st.session_state['clientes'], key=lambda x: x['NOME'])
-                st.success(f"Tutor {nome.upper()} cadastrado e organizado na lista!")
+                st.success(f"Tutor {nome.upper()} salvo e organizado!")
                 st.rerun()
             else:
-                st.error("O campo 'Nome' não pode ficar vazio.")
+                st.error("O Nome é obrigatório para o cadastro.")
 
     st.divider()
     
-    # Exibição da Lista com Numeração e Ordem Alfabética
+    # Lista com numeração automática e visual de grade
     if st.session_state['clientes']:
-        st.write("📋 **Lista de Clientes (Ordem Alfabética)**")
+        st.write("📋 **Lista de Clientes Cadastrados**")
         df_tutores = pd.DataFrame(st.session_state['clientes'])
         
-        # Cria a numeração automática 01, 02...
+        # Numeração 01, 02... conforme o padrão do orçamento
         df_tutores.index = [f"{i+1:02d}" for i in range(len(df_tutores))]
         
+        # Exibe a tabela com as linhas pretas (st.table é mais estável no notebook)
         st.table(df_tutores)
-
-        if st.button("🗑️ Excluir Último Cadastro"):
-            st.session_state['clientes'].pop()
-            st.rerun()
 # =========================================================
 # MÓDULO 3: PRONTUÁRIO IA (OTIMIZADO PARA VOZ)
 # =========================================================
