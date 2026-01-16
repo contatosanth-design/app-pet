@@ -113,18 +113,43 @@ elif menu == "🐾 Pets":
                 st.success("Pet salvo!")
 
 # =========================================================
-# MÓDULO 3: PRONTUÁRIO IA
+# MÓDULO 3: PRONTUÁRIO IA (OTIMIZADO PARA VOZ)
 # =========================================================
 elif menu == "🩺 Prontuário IA":
     st.subheader("🩺 Atendimento Clínico")
-    st.info("💡 Clique no campo 'Relato' e use Win+H para ditar.")
+    
+    # Lembrete visual para garantir o foco do cursor
+    st.warning("🎤 PARA DITAR: 1. Clique na caixa abaixo | 2. Aperte Win+H | 3. Fale após o sinal.")
+    
     if st.session_state['pets']:
-        p_sel = st.selectbox("Paciente", [p['nome'] for p in st.session_state['pets']])
-        relato = st.text_area("Relato da Consulta (Clique aqui e fale)", height=300)
-        if st.button("💾 Salvar Atendimento"):
-            st.session_state['historico'].append({"Data": date.today().strftime("%d/%m/%Y"), "Pet": p_sel, "Relato": relato})
-            st.success("Prontuário salvo!")
-    else: st.info("Cadastre um pet.")
+        # Seletor de Paciente
+        p_sel = st.selectbox("Selecione o Paciente", [p['nome'] for p in st.session_state['pets']])
+        
+        c1, c2 = st.columns(2)
+        peso = c1.text_input("Peso (kg)", placeholder="Ex: 12.5")
+        temp = c2.text_input("Temperatura (°C)", placeholder="Ex: 38.5")
+        
+        # O campo de texto agora tem um 'key' único para ajudar o Windows a não perder o foco
+        relato = st.text_area(
+            "Evolução Clínica / Anamnese (O texto aparecerá aqui)", 
+            height=300, 
+            key="campo_ditado",
+            placeholder="Clique aqui antes de começar a falar..."
+        )
+        
+        if st.button("💾 Salvar Histórico da Consulta"):
+            if relato:
+                st.session_state['historico'].append({
+                    "Data": date.today().strftime("%d/%m/%Y"), 
+                    "Pet": p_sel, 
+                    "Peso": peso,
+                    "Relato": relato
+                })
+                st.success(f"Prontuário de {p_sel} arquivado com sucesso!")
+            else:
+                st.error("O relato está vazio. Digite ou dite algo antes de salvar.")
+    else: 
+        st.info("Nenhum pet cadastrado para atendimento.")
 
 # =========================================================
 # MÓDULO 4: FINANCEIRO
