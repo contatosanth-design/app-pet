@@ -152,10 +152,10 @@ elif menu == "🩺 Prontuário IA":
         st.info("Nenhum pet cadastrado para atendimento.")
 
 # =========================================================
-# MÓDULO 4: FINANCEIRO (ESTILO GRADE - CORRIGIDO)
+# MÓDULO 4: FINANCEIRO (PREÇOS LIMPOS - 2 CASAS)
 # =========================================================
 elif menu == "💰 Financeiro":
-    # 1. Cabeçalho Estilo Canva
+    # Cabeçalho Estilo Canva
     st.markdown("""
         <div style="border: 2px solid black; padding: 10px; text-align: center; background-color: white;">
             <b style="font-size: 20px;">CONSULTÓRIO VETERINÁRIO RIBEIRA</b><br>
@@ -167,13 +167,13 @@ elif menu == "💰 Financeiro":
 
     if 'carrinho' not in st.session_state: st.session_state['carrinho'] = []
 
-    # 2. Seletor de Itens (Gaveta)
-    with st.expander("🔍 TABELA DE PREÇOS (CLIQUE PARA ADICIONAR)", expanded=st.session_state.get('gaveta_aberta', False)):
+    # Seletor de Itens
+    with st.expander("🔍 TABELA DE PREÇOS", expanded=st.session_state.get('gaveta_aberta', False)):
         for idx, produto in enumerate(st.session_state['estoque']):
             c1, c2, c3 = st.columns([3, 1, 1])
             c1.write(f"**{produto['Item']}**")
             c2.write(f"R$ {produto['Preco']:.2f}")
-            if c3.button("➕", key=f"add_final_{idx}"):
+            if c3.button("➕", key=f"add_fmt_{idx}"):
                 st.session_state['carrinho'].append(produto)
                 st.session_state['gaveta_aberta'] = False
                 st.rerun()
@@ -181,14 +181,17 @@ elif menu == "💰 Financeiro":
     if st.session_state['carrinho']:
         st.markdown("### 📝 Orçamento Atual")
         
-        # 3. Grade de Itens (Uso de Tabela Nativa para evitar erro de texto)
-        df_carrinho = pd.DataFrame(st.session_state['carrinho'])
-        df_carrinho.index = range(1, len(df_carrinho) + 1) # Começa do 01 como no Canva
+        # Criando a tabela e formatando os números
+        df_exibir = pd.DataFrame(st.session_state['carrinho'])
+        df_exibir.index = range(1, len(df_exibir) + 1)
         
-        # Exibe a tabela com as linhas de grade que o senhor gosta
-        st.table(df_carrinho) 
+        # A MÁGICA: Formata a coluna Preco para mostrar apenas 2 casas decimais
+        df_exibir['Preco'] = df_exibir['Preco'].map('R$ {:,.2f}'.format)
+        
+        # Exibe a tabela com as colunas renomeadas como no seu rascunho
+        st.table(df_exibir.rename(columns={'Item': 'DESCRIÇÃO', 'Preco': 'VALOR'})) 
 
-        # 4. Totalizador e Ações
+        # Totalizador
         total = sum(item['Preco'] for item in st.session_state['carrinho'])
         st.markdown(f"<div style='text-align: right; border: 2px solid black; padding: 10px; font-size: 20px; background: #f0f2f6;'><b>VALOR TOTAL: R$ {total:.2f}</b></div>", unsafe_allow_html=True)
 
@@ -197,7 +200,7 @@ elif menu == "💰 Financeiro":
         
         with col_rem:
             idx_escolhido = st.number_input("Remover item nº:", min_value=1, max_value=len(st.session_state['carrinho']), step=1)
-            if st.button("❌ Remover Item"):
+            if st.button("❌ Remover"):
                 st.session_state['carrinho'].pop(int(idx_escolhido)-1)
                 st.rerun()
         
@@ -206,8 +209,7 @@ elif menu == "💰 Financeiro":
             st.rerun()
             
         if col_zap.button("📲 WhatsApp"):
-            st.success("Link gerado!")
-# =========================================================
+            st.success("Orçamento pronto para envio!")# =========================================================
 # MÓDULO 5: GESTÃO DE TABELA DE PREÇOS (IMPORTADOR)
 # =========================================================
 elif menu == "⚙️ Tabela de Preços":
