@@ -1,29 +1,42 @@
-import streamlit as st
-import pandas as pd
-from datetime import datetime, date
-import urllib.parse
+# =========================================================
+# MÓDULO 0: DASHBOARD (NOVA CARA INICIAL)
+# =========================================================
+if menu == "🏠 Dashboard":
+    st.title("🏥 Bem-vindo ao Ribeira Vet Pro")
+    st.write(f"Hoje é dia: **{date.today().strftime('%d/%m/%Y')}**")
+    
+    st.divider()
+    
+    # Cartões de Resumo (Métricas)
+    col1, col2, col3 = st.columns(3)
+    col1.metric("👥 Tutores", len(st.session_state['clientes']))
+    col2.metric("🐾 Pacientes", len(st.session_state['pets']))
+    col3.metric("🩺 Atendimentos", len(st.session_state['historico']))
+    
+    st.divider()
+    
+    # Atalhos Rápidos para facilitar o uso no dia a dia
+    st.subheader("⚡ Atalhos Rápidos")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        if st.button("➕ Novo Tutor", use_container_width=True):
+            st.info("Acesse o menu lateral e clique em '👤 Tutores'")
+    with c2:
+        if st.button("🐾 Cadastrar Pet", use_container_width=True):
+            st.info("Acesse o menu lateral e clique em '🐾 Pets'")
+    with c3:
+        if st.button("💰 Gerar Recibo", use_container_width=True):
+            st.info("Acesse o menu lateral e clique em '💰 Financeiro'")
 
-st.set_page_config(page_title="Ribeira Vet Pro v7.0", layout="wide")
+    st.divider()
 
-# 1. Banco de Dados e Itens
-if 'estoque' not in st.session_state:
-    st.session_state['estoque'] = [
-        {"Item": "Vacina V10 (Importada)", "Preco": 120.00},
-        {"Item": "Vacina Antirrábica", "Preco": 60.00},
-        {"Item": "Consulta Clínica", "Preco": 150.00},
-        {"Item": "Hemograma Completo", "Preco": 95.00},
-        {"Item": "Castração Macho", "Preco": 350.00},
-        {"Item": "Simparic 10-20kg", "Preco": 88.00}
-    ]
-
-for key in ['clientes', 'pets', 'historico']:
-    if key not in st.session_state: st.session_state[key] = []
-
-# 2. Menu Lateral
-with st.sidebar:
-    st.title("Ribeira Vet Pro")
-    st.info("Versão 7.0 - Estável")
-    menu = st.radio("NAVEGAÇÃO", ["🏠 Dashboard", "👤 Tutores", "🐾 Pets", "🩺 Prontuário IA", "💰 Financeiro"])
+    # Tabela de últimos atendimentos para a tela não ficar branca
+    if st.session_state['historico']:
+        st.subheader("📅 Últimos Atendimentos")
+        df_hist = pd.DataFrame(st.session_state['historico'])
+        st.table(df_hist.tail(5)) 
+    else:
+        st.info("Nenhum atendimento registrado hoje. Os dados aparecerão aqui assim que o senhor usar o Prontuário.")
 
 # --- TUTORES ---
 if menu == "👤 Tutores":
