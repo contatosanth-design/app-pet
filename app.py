@@ -60,32 +60,37 @@ if menu == "🏠 Dashboard":
         st.info("Nenhum atendimento hoje. A lista aparecerá aqui após usar o Prontuário.")
 
 # =========================================================
-# MÓDULO 1: TUTORES (VERSÃO CORRIGIDA COM E-MAIL)
+# MÓDULO 1: CADASTRO DE TUTORES (AJUSTADO)
 # =========================================================
 elif menu == "👤 Tutores":
-    st.subheader("📝 Cadastro de Tutores")
-    with st.form("f_tutor", clear_on_submit=True):
-        nome = st.text_input("Nome do Cliente*")
-        c1, c2 = st.columns(2)
-        cpf = c1.text_input("CPF")
-        zap = c2.text_input("WhatsApp*")
-        
-        # Campo de E-mail recuperado da Versão 7.0
-        email = st.text_input("E-mail para Boletas e Promoções") 
-        
-        end = st.text_area("Endereço Completo")
-        if st.form_submit_button("Salvar Tutor"):
-            if nome and zap:
-                st.session_state['clientes'].append({
-                    "id": f"T{len(st.session_state['clientes'])+1:03d}", 
-                    "nome": nome.upper(), 
-                    "cpf": cpf, 
-                    "zap": zap, 
-                    "email": email, # Salvando o e-mail na ficha do cliente
-                    "end": end
-                })
-                st.success(f"Tutor {nome.upper()} cadastrado com sucesso!")
+    st.subheader("👤 Cadastro de Tutores")
 
+    with st.form("form_tutor", clear_on_submit=True):
+        nome = st.text_input("Nome Completo (Obrigatório) *")
+        # Removi a obrigatoriedade dos campos abaixo
+        zap = st.text_input("WhatsApp (Opcional - Ex: 21999999999)")
+        email = st.text_input("E-mail (Opcional)")
+        
+        if st.form_submit_button("Cadastrar Tutor"):
+            if nome:  # Verifica apenas se o nome foi preenchido
+                novo_tutor = {
+                    "nome": nome.upper(),
+                    "zap": zap if zap else "Não informado",
+                    "email": email if email else "Não informado"
+                }
+                st.session_state['clientes'].append(novo_tutor)
+                st.success(f"Tutor {nome} cadastrado com sucesso!")
+                st.rerun()
+            else:
+                st.error("Por favor, preencha pelo menos o nome do tutor.")
+
+    st.divider()
+    
+    # Lista de Tutores com visual de Grade
+    if st.session_state['clientes']:
+        st.write("📋 **Tutores Cadastrados**")
+        df_tutores = pd.DataFrame(st.session_state['clientes'])
+        st.table(df_tutores.rename(columns={'nome': 'NOME', 'zap': 'WHATSAPP', 'email': 'E-MAIL'}))
 # =========================================================
 # MÓDULO 2: PETS
 # =========================================================
