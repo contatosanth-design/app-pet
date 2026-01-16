@@ -152,18 +152,58 @@ elif menu == "🩺 Prontuário IA":
         st.info("Nenhum pet cadastrado para atendimento.")
 
 # =========================================================
-# MÓDULO 4: FINANCEIRO
+# MÓDULO 4: FINANCEIRO (RECIBO COM QUANTIDADE E PAGAMENTO)
 # =========================================================
 elif menu == "💰 Financeiro":
-    st.subheader("💰 Fechamento de Conta")
-    if st.session_state['clientes']:
-        t_nome = st.selectbox("Tutor", [c['nome'] for c in st.session_state['clientes']])
-        itens_sel = st.multiselect("Procedimentos", [i['Item'] for i in st.session_state['estoque']])
+    st.subheader("💰 Fechamento de Conta Profissional")
+    
+    if not st.session_state['clientes']:
+        st.warning("Cadastre um tutor primeiro.")
+    else:
+        t_lista = {c['nome']: c for c in st.session_state['clientes']}
+        t_nome = st.selectbox("Selecione o Tutor para o Recibo", list(t_lista.keys()))
+        
+        # Seleção múltipla de itens
+        itens_sel = st.multiselect("Selecione os Procedimentos/Produtos", [i['Item'] for i in st.session_state['estoque']])
+        
         if itens_sel:
-            total = 0
+            st.markdown("### 📄 Detalhamento do Recibo")
+            total_geral = 0
+            resumo_texto = ""
+            
+            # Criamos uma linha para cada item selecionado com seletor de quantidade
             for nome_item in itens_sel:
-                preco = next(item['Preco'] for item in st.session_state['estoque'] if item['Item'] == nome_item)
-                st.write(f"🔹 {nome_item}: **R$ {preco:.2f}**")
-                total += preco
+                preco_un = next(item['Preco'] for item in st.session_state['estoque'] if item['Item'] == nome_item)
+                
+                c1, c2, c3 = st.columns([3, 1, 1])
+                c1.write(f"**{nome_item}**")
+                qtd = c2.number_input(f"Qtd ({nome_item})", min_value=1, value=1, key=f"q_{nome_item}")
+                subtotal = preco_un * qtd
+                c3.write(f"R$ {subtotal:.2f}")
+                
+                total_geral += subtotal
+                resumo_texto += f"- {nome_item} (x{qtd}): R$ {subtotal:.2f}\n"
+
             st.divider()
-            st.markdown(f"## **TOTAL: R$ {total:.2f}**")
+            
+            # Opções de Pagamento
+            c_pag1, c_pag2 = st.columns(2)
+            forma_pag = c_pag1.selectbox("Forma de Pagamento", ["Pix", "Cartão de Crédito", "Cartão de Débito", "Dinheiro"])
+            desconto = c_pag2.number_input("Desconto Especial (R$)", min_value=0.0, value=0.0)
+            
+            valor_final = total_geral - desconto
+            
+            st.markdown(f"## **VALOR TOTAL: R$ {valor_final:.2f}**")
+
+            # Botão de WhatsApp aprimorado
+            if st.button("📲 Enviar Recibo via WhatsApp"):
+                zap = t_lista[t_nome]['zap']
+                msg = (f"Olá {t_nome}, segue seu recibo da Ribeira Vet:\n\n"
+                       f"{resumo_texto}"
+                       f"------------------\n"
+                       f"Pagamento: {forma_pag}\n"
+                       f"Desconto: R$ {desconto:.2f}\n"
+                       f"*Total Final: R$ {valor_final:.2f}*")
+                
+                link = f"https://wa.me/{zap}?text={urllib.parse.quote(msg)}"
+                st.markdown(f"#### [👉 Clique Aqui para Abrir o WhatsApp]({link})")
