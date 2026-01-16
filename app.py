@@ -152,50 +152,77 @@ elif menu == "🩺 Prontuário IA":
         st.info("Nenhum pet cadastrado para atendimento.")
 
 # =========================================================
-# MÓDULO 4: FINANCEIRO (ESTILO CANVA / NOTA PROFISSIONAL)
+# MÓDULO 4: FINANCEIRO (ULTRA-COMPACTO - ESTILO EXCEL)
 # =========================================================
 elif menu == "💰 Financeiro":
-    # Cabeçalho Visual (Espelho do seu Canva)
-    st.markdown(f"""
-        <div style="text-align: center; border: 2px solid #333; padding: 10px; border-radius: 10px;">
-            <h2 style="margin:0;">Consultório Veterinário Ribeira</h2>
-            <p style="margin:0;">CRVV-RJ 9862 Ricardo Santos</p>
+    # CSS para forçar a densidade máxima de linhas
+    st.markdown("""
+        <style>
+        .nota-fiscal {
+            font-family: 'Courier New', Courier, monospace;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .nota-fiscal td, .nota-fiscal th {
+            border: 1px solid #000;
+            padding: 2px 8px !important; /* Espaço mínimo interno */
+            line-height: 1.1 !important;  /* Altura da linha mínima */
+            font-size: 13px !important;
+        }
+        .stButton button {
+            padding: 0px 5px !important;
+            height: 25px !important;
+        }
+        div[data-testid="stVerticalBlock"] > div {
+            margin-top: -10px !important; /* Remove espaço entre blocos do Streamlit */
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Cabeçalho compactado
+    st.markdown("""
+        <div style="border: 2px solid black; padding: 5px; text-align: center; margin-bottom: 10px;">
+            <b style="font-size: 18px;">CONSULTÓRIO VETERINÁRIO RIBEIRA</b><br>
+            <small>CRVV-RJ 9862 Ricardo Santos</small>
         </div>
     """, unsafe_allow_html=True)
-    
-    st.write("") # Espaço
 
     if 'carrinho' not in st.session_state: st.session_state['carrinho'] = []
 
-    # Seletor de Itens (Gaveta)
-    with st.expander("🔍 ABRIR TABELA DE PREÇOS"):
+    # Seletor de Itens
+    with st.expander("🔍 TABELA DE PREÇOS"):
         for idx, produto in enumerate(st.session_state['estoque']):
-            c1, c2, c3 = st.columns([3, 1, 1])
+            c1, c2, c3 = st.columns([4, 2, 1])
+            c1.write(f"{produto['Item']}")
+            c2.write(f"R$ {produto['Preco']:.2f}")
             if c3.button("➕", key=f"add_{idx}"):
                 st.session_state['carrinho'].append(produto)
                 st.rerun()
 
     if st.session_state['carrinho']:
-        st.markdown("---")
-        # Grade de Orçamento (Visual das linhas pretas da sua foto)
-        h1, h2, h3 = st.columns([4, 2, 1])
-        h1.markdown("<b style='text-decoration: underline;'>DESCRIÇÃO</b>", unsafe_allow_html=True)
-        h2.markdown("<b style='text-decoration: underline;'>VALOR</b>", unsafe_allow_html=True)
-        h3.write("**X**")
+        # Tabela compacta "Espelho do Canva"
+        st.markdown("<table class='nota-fiscal'><tr><th>DESCRIÇÃO</th><th style='width:100px'>VALOR</th></tr>", unsafe_allow_html=True)
         
         total = 0
         for i, item in enumerate(st.session_state['carrinho']):
-            col1, col2, col3 = st.columns([4, 2, 1])
-            # Linha preta horizontal entre os itens
-            col1.markdown(f"<div style='border-bottom: 2px solid black; padding: 5px;'>{i+1:02d}. {item['Item']}</div>", unsafe_allow_html=True)
-            col2.markdown(f"<div style='border-bottom: 2px solid black; padding: 5px;'>R$ {item['Preco']:.2f}</div>", unsafe_allow_html=True)
+            # Criamos as linhas simulando o caderno
+            col1, col2, col3 = st.columns([5, 2, 1])
+            col1.markdown(f"<div style='border: 1px solid black; padding: 2px;'>{i+1:02d}. {item['Item']}</div>", unsafe_allow_html=True)
+            col2.markdown(f"<div style='border: 1px solid black; padding: 2px;'>R$ {item['Preco']:.2f}</div>", unsafe_allow_html=True)
             if col3.button("❌", key=f"rem_{i}"):
                 st.session_state['carrinho'].pop(i)
                 st.rerun()
             total += item['Preco']
             
-        st.markdown(f"<h2 style='text-align: right;'>TOTAL: R$ {total:.2f}</h2>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: right; border: 2px solid black; padding: 5px; background: #eee;'><b>TOTAL: R$ {total:.2f}</b></div>", unsafe_allow_html=True)
         
+        st.write("")
+        c_btn1, c_btn2 = st.columns(2)
+        if c_btn1.button("🗑️ Limpar"):
+            st.session_state['carrinho'] = []
+            st.rerun()
+        if c_btn2.button("📲 WhatsApp"):
+            st.info("Link gerado!")        
 # =========================================================
 # MÓDULO 5: GESTÃO DE TABELA DE PREÇOS (IMPORTADOR)
 # =========================================================
