@@ -152,43 +152,14 @@ elif menu == "🩺 Prontuário IA":
         st.info("Nenhum pet cadastrado para atendimento.")
 
 # =========================================================
-# MÓDULO 4: FINANCEIRO (TABELA PROFISSIONAL COMPACTA)
+# MÓDULO 4: FINANCEIRO (ESTILO GRADE - CORRIGIDO)
 # =========================================================
 elif menu == "💰 Financeiro":
-    # CSS para ícones pequenos e tabela sem erros de linha
+    # 1. Cabeçalho Estilo Canva
     st.markdown("""
-        <style>
-        .tabela-orcamento {
-            width: 100%;
-            border-collapse: collapse;
-            font-family: Arial, sans-serif;
-            margin-bottom: 10px;
-        }
-        .tabela-orcamento th {
-            border: 1px solid black;
-            background-color: #f2f2f2;
-            padding: 4px;
-            font-size: 13px;
-        }
-        .tabela-orcamento td {
-            border: 1px solid black;
-            padding: 2px 8px;
-            font-size: 13px;
-        }
-        /* Ajuste para botões pequenos */
-        .stButton > button {
-            padding: 0px 2px !important;
-            height: 22px !important;
-            font-size: 12px !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    # Cabeçalho Profissional
-    st.markdown("""
-        <div style="border: 2px solid black; padding: 5px; text-align: center; line-height: 1.2;">
-            <b style="font-size: 16px;">CONSULTÓRIO VETERINÁRIO RIBEIRA</b><br>
-            <span style="font-size: 12px;">CRVV-RJ 9862 Ricardo Santos</span>
+        <div style="border: 2px solid black; padding: 10px; text-align: center; background-color: white;">
+            <b style="font-size: 20px;">CONSULTÓRIO VETERINÁRIO RIBEIRA</b><br>
+            <span>CRVV-RJ 9862 Ricardo Santos</span>
         </div>
     """, unsafe_allow_html=True)
     
@@ -196,60 +167,46 @@ elif menu == "💰 Financeiro":
 
     if 'carrinho' not in st.session_state: st.session_state['carrinho'] = []
 
-    # Seletor de Itens (Expander)
-    with st.expander("📋 TABELA DE PREÇOS", expanded=st.session_state.get('gaveta_aberta', False)):
+    # 2. Seletor de Itens (Gaveta)
+    with st.expander("🔍 TABELA DE PREÇOS (CLIQUE PARA ADICIONAR)", expanded=st.session_state.get('gaveta_aberta', False)):
         for idx, produto in enumerate(st.session_state['estoque']):
-            c1, c2, c3 = st.columns([4, 2, 1])
+            c1, c2, c3 = st.columns([3, 1, 1])
             c1.write(f"**{produto['Item']}**")
             c2.write(f"R$ {produto['Preco']:.2f}")
-            if c3.button("➕", key=f"add_item_{idx}"):
+            if c3.button("➕", key=f"add_final_{idx}"):
                 st.session_state['carrinho'].append(produto)
                 st.session_state['gaveta_aberta'] = False
                 st.rerun()
 
     if st.session_state['carrinho']:
-        # Criando a Tabela em HTML para evitar cruzamento de linhas
-        html_tabela = """
-        <table class="tabela-orcamento">
-            <tr>
-                <th style="width: 70%;">DESCRIÇÃO</th>
-                <th style="width: 30%;">VALOR</th>
-            </tr>
-        """
+        st.markdown("### 📝 Orçamento Atual")
         
-        total = 0
-        for i, item in enumerate(st.session_state['carrinho']):
-            html_tabela += f"""
-            <tr>
-                <td>{i+1:02d}. {item['Item']}</td>
-                <td style="text-align: right;">R$ {item['Preco']:.2f}</td>
-            </tr>
-            """
-            total += item['Preco']
+        # 3. Grade de Itens (Uso de Tabela Nativa para evitar erro de texto)
+        df_carrinho = pd.DataFrame(st.session_state['carrinho'])
+        df_carrinho.index = range(1, len(df_carrinho) + 1) # Começa do 01 como no Canva
         
-        html_tabela += "</table>"
-        
-        # Exibe a tabela pronta
-        st.markdown(html_tabela, unsafe_allow_html=True)
+        # Exibe a tabela com as linhas de grade que o senhor gosta
+        st.table(df_carrinho) 
 
-        # Área de exclusão e Total (Botões alinhados)
-        col_excluir, col_total = st.columns([1, 1])
+        # 4. Totalizador e Ações
+        total = sum(item['Preco'] for item in st.session_state['carrinho'])
+        st.markdown(f"<div style='text-align: right; border: 2px solid black; padding: 10px; font-size: 20px; background: #f0f2f6;'><b>VALOR TOTAL: R$ {total:.2f}</b></div>", unsafe_allow_html=True)
+
+        st.write("")
+        col_rem, col_limp, col_zap = st.columns([2, 1, 1])
         
-        with col_excluir:
-            idx_rem = st.selectbox("Remover item nº:", range(1, len(st.session_state['carrinho'])+1)) if st.session_state['carrinho'] else None
-            if st.button("❌ Remover Selecionado"):
-                st.session_state['carrinho'].pop(idx_rem-1)
+        with col_rem:
+            idx_escolhido = st.number_input("Remover item nº:", min_value=1, max_value=len(st.session_state['carrinho']), step=1)
+            if st.button("❌ Remover Item"):
+                st.session_state['carrinho'].pop(int(idx_escolhido)-1)
                 st.rerun()
-
-        st.markdown(f"<div style='text-align: right; border: 2px solid black; padding: 5px; font-size: 18px;'><b>TOTAL: R$ {total:.2f}</b></div>", unsafe_allow_html=True)
         
-        st.divider()
-        b_limpar, b_zap = st.columns(2)
-        if b_limpar.button("🗑️ Limpar Tudo"):
+        if col_limp.button("🗑️ Limpar Tudo"):
             st.session_state['carrinho'] = []
             st.rerun()
-        if b_zap.button("📲 WhatsApp"):
-            st.info("Link gerado com sucesso!")       
+            
+        if col_zap.button("📲 WhatsApp"):
+            st.success("Link gerado!")
 # =========================================================
 # MÓDULO 5: GESTÃO DE TABELA DE PREÇOS (IMPORTADOR)
 # =========================================================
