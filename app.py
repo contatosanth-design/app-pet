@@ -152,58 +152,64 @@ elif menu == "🩺 Prontuário IA":
         st.info("Nenhum pet cadastrado para atendimento.")
 
 # =========================================================
-# MÓDULO 4: FINANCEIRO (RECIBO COM QUANTIDADE E PAGAMENTO)
+# MÓDULO 4: FINANCEIRO + GESTOR DE PREÇOS (POP-UP)
 # =========================================================
 elif menu == "💰 Financeiro":
-    st.subheader("💰 Fechamento de Conta Profissional")
+    st.subheader("💰 Fechamento de Conta e Tabela de Preços")
     
+    # 1. "POP-UP" DE CONSULTA E EDIÇÃO DE PRODUTOS
+    with st.expander("📋 Consultar / Adicionar Produtos na Tabela"):
+        st.write("Consulte seus preços ou cadastre um novo item abaixo:")
+        df_precos = pd.DataFrame(st.session_state['estoque'])
+        st.table(df_precos) # Tabela suspensa visual
+        
+        st.divider()
+        st.write("**Cadastrar Novo Item:**")
+        c_novo1, c_novo2 = st.columns([2, 1])
+        novo_item = c_novo1.text_input("Nome do Serviço/Produto")
+        novo_preco = c_novo2.number_input("Preço (R$)", min_value=0.0)
+        if st.button("➕ Adicionar à Tabela"):
+            if novo_item:
+                st.session_state['estoque'].append({"Item": novo_item, "Preco": novo_preco})
+                st.success(f"{novo_item} adicionado! Feche esta aba para atualizar.")
+                st.rerun()
+
+    st.divider()
+
+    # 2. ÁREA DE FECHAMENTO (RECIBO)
     if not st.session_state['clientes']:
         st.warning("Cadastre um tutor primeiro.")
     else:
         t_lista = {c['nome']: c for c in st.session_state['clientes']}
-        t_nome = st.selectbox("Selecione o Tutor para o Recibo", list(t_lista.keys()))
+        t_nome = st.selectbox("Selecione o Tutor", list(t_lista.keys()))
         
-        # Seleção múltipla de itens
-        itens_sel = st.multiselect("Selecione os Procedimentos/Produtos", [i['Item'] for i in st.session_state['estoque']])
+        # Seleção de itens cadastrados
+        itens_sel = st.multiselect("Itens do Atendimento", [i['Item'] for i in st.session_state['estoque']])
         
         if itens_sel:
-            st.markdown("### 📄 Detalhamento do Recibo")
+            st.markdown("### 📄 Recibo Detalhado")
             total_geral = 0
             resumo_texto = ""
             
-            # Criamos uma linha para cada item selecionado com seletor de quantidade
             for nome_item in itens_sel:
                 preco_un = next(item['Preco'] for item in st.session_state['estoque'] if item['Item'] == nome_item)
                 
-                c1, c2, c3 = st.columns([3, 1, 1])
-                c1.write(f"**{nome_item}**")
-                qtd = c2.number_input(f"Qtd ({nome_item})", min_value=1, value=1, key=f"q_{nome_item}")
+                col_item, col_qtd, col_sub = st.columns([3, 1, 1])
+                col_item.write(f"**{nome_item}**")
+                qtd = col_qtd.number_input(f"Qtd", min_value=1, value=1, key=f"fin_{nome_item}")
                 subtotal = preco_un * qtd
-                c3.write(f"R$ {subtotal:.2f}")
+                col_sub.write(f"R$ {subtotal:.2f}")
                 
                 total_geral += subtotal
                 resumo_texto += f"- {nome_item} (x{qtd}): R$ {subtotal:.2f}\n"
 
             st.divider()
             
-            # Opções de Pagamento
-            c_pag1, c_pag2 = st.columns(2)
-            forma_pag = c_pag1.selectbox("Forma de Pagamento", ["Pix", "Cartão de Crédito", "Cartão de Débito", "Dinheiro"])
-            desconto = c_pag2.number_input("Desconto Especial (R$)", min_value=0.0, value=0.0)
-            
-            valor_final = total_geral - desconto
-            
-            st.markdown(f"## **VALOR TOTAL: R$ {valor_final:.2f}**")
+            forma_pag = st.selectbox("Forma de Pagamento", ["Pix", "Dinheiro", "Cartão"])
+            st.markdown(f"## **VALOR TOTAL: R$ {total_geral:.2f}**")
 
-            # Botão de WhatsApp aprimorado
-            if st.button("📲 Enviar Recibo via WhatsApp"):
+            if st.button("📲 Gerar Recibo WhatsApp"):
                 zap = t_lista[t_nome]['zap']
-                msg = (f"Olá {t_nome}, segue seu recibo da Ribeira Vet:\n\n"
-                       f"{resumo_texto}"
-                       f"------------------\n"
-                       f"Pagamento: {forma_pag}\n"
-                       f"Desconto: R$ {desconto:.2f}\n"
-                       f"*Total Final: R$ {valor_final:.2f}*")
-                
+                msg = f"Olá {t_nome}, recibo Ribeira Vet:\n\n{resumo_texto}\nTotal: R$ {total_geral:.2f} ({forma_pag})"
                 link = f"https://wa.me/{zap}?text={urllib.parse.quote(msg)}"
-                st.markdown(f"#### [👉 Clique Aqui para Abrir o WhatsApp]({link})")
+                st.markdown(f"#### [Clique aqui para enviar]({link})")
