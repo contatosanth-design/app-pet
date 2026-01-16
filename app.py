@@ -152,79 +152,74 @@ elif menu == "🩺 Prontuário IA":
         st.info("Nenhum pet cadastrado para atendimento.")
 
 # =========================================================
-# MÓDULO 4: FINANCEIRO (ESTILO CADERNO + FECHAMENTO AUTO)
+# MÓDULO 4: FINANCEIRO (VISUAL COMPACTO - ESTILO EXCEL)
 # =========================================================
 elif menu == "💰 Financeiro":
-    st.subheader("💰 Orçamento e Venda Rápida")
+    # CSS para diminuir o espaço entre as linhas (Densidade máxima)
+    st.markdown("""
+        <style>
+        [data-testid="stVerticalBlock"] > div { margin-top: -15px; margin-bottom: -15px; }
+        .compact-font { font-size: 14px !important; margin-bottom: 0px; }
+        </style>
+    """, unsafe_allow_html=True)
 
-    # Controle da gaveta e do carrinho
-    if 'gaveta_aberta' not in st.session_state:
-        st.session_state['gaveta_aberta'] = False
-    if 'carrinho' not in st.session_state:
-        st.session_state['carrinho'] = []
+    st.subheader("💰 Orçamento Rápido")
 
-    # 1. GAVETA DE PRODUTOS (FECHA APÓS CLIQUE)
-    with st.expander("🔍 ABRIR TABELA DE PREÇOS", expanded=st.session_state['gaveta_aberta']):
-        st.write("Clique no ➕ para enviar ao caderno de orçamento:")
+    if 'gaveta_aberta' not in st.session_state: st.session_state['gaveta_aberta'] = False
+    if 'carrinho' not in st.session_state: st.session_state['carrinho'] = []
+
+    # 1. TABELA DE PREÇOS (GAVETA)
+    with st.expander("🔍 TABELA DE PREÇOS", expanded=st.session_state['gaveta_aberta']):
         for idx, produto in enumerate(st.session_state['estoque']):
-            c1, c2, c3 = st.columns([3, 1, 1])
-            c1.write(f"**{produto['Item']}**")
-            c2.write(f"R$ {produto['Preco']:.2f}")
-            if c3.button("➕", key=f"add_cad_{idx}"):
-                st.session_state['carrinho'].append({
-                    "Item": produto['Item'], 
-                    "Preco": produto['Preco']
-                })
-                # Força o fechamento da gaveta para liberar a visão
+            c1, c2, c3 = st.columns([4, 2, 1])
+            c1.markdown(f"<p class='compact-font'><b>{produto['Item']}</b></p>", unsafe_allow_html=True)
+            c2.markdown(f"<p class='compact-font'>R$ {produto['Preco']:.2f}</p>", unsafe_allow_html=True)
+            if c3.button("➕", key=f"add_{idx}"):
+                st.session_state['carrinho'].append({"Item": produto['Item'], "Preco": produto['Preco']})
                 st.session_state['gaveta_aberta'] = False 
                 st.rerun()
 
-    # Botão de atalho para reabrir a lista rapidamente
     if not st.session_state['gaveta_aberta']:
-        if st.button("➕ Adicionar outro item da tabela"):
+        if st.button("➕ Adicionar Item"):
             st.session_state['gaveta_aberta'] = True
             st.rerun()
 
     st.divider()
 
-    # 2. VISUAL DE CADERNO (CONFORME MODELO ENVIADO)
+    # 2. O CADERNO DE ORÇAMENTO (VISUAL EXCEL)
     if st.session_state['clientes']:
         t_lista = {c['nome']: c for c in st.session_state['clientes']}
-        t_nome = st.selectbox("Cliente / Tutor", list(t_lista.keys()))
+        t_nome = st.selectbox("Cliente", list(t_lista.keys()))
         
         if st.session_state['carrinho']:
-            st.write("### 📝 Orçamento de Produtos e Serviços")
-            
-            # Criando a estrutura de colunas do caderno
-            df_caderno = pd.DataFrame(st.session_state['carrinho'])
-            
-            # Exibição organizada em linhas
-            total_geral = 0
+            # Cabeçalho da Tabela (Igual à imagem enviada)
+            h1, h2, h3 = st.columns([4, 2, 1])
+            h1.write("**DESCRIÇÃO**")
+            h2.write("**VALOR**")
+            h3.write("**X**")
+            st.markdown("<hr style='margin: 5px 0;'>", unsafe_allow_html=True)
+
+            total = 0
             for i, item in enumerate(st.session_state['carrinho']):
-                col_desc, col_val, col_del = st.columns([4, 2, 1])
-                col_desc.write(f"_{i+1:02d}_ | {item['Item']}")
-                col_val.write(f"R$ {item['Preco']:.2f}")
-                if col_del.button("❌", key=f"del_item_{i}"):
+                col1, col2, col3 = st.columns([4, 2, 1])
+                # Linhas bem juntas, como no Excel
+                col1.markdown(f"<p class='compact-font'>{item['Item']}</p>", unsafe_allow_html=True)
+                col2.markdown(f"<p class='compact-font'>R$ {item['Preco']:.2f}</p>", unsafe_allow_html=True)
+                if col3.button("❌", key=f"del_{i}", help="Remover"):
                     st.session_state['carrinho'].pop(i)
                     st.rerun()
-                total_geral += item['Preco']
-                st.markdown("---") # Linha divisória do caderno
-
-            # Rodapé do Caderno
-            st.markdown(f"### **VALOR TOTAL: R$ {total_geral:.2f}**")
+                total += item['Preco']
             
-            c_zap1, c_zap2 = st.columns(2)
-            if c_zap1.button("🗑️ Limpar Tudo"):
+            st.markdown("<hr style='border: 1px solid #333; margin: 10px 0;'>", unsafe_allow_html=True)
+            st.markdown(f"### **TOTAL: R$ {total:.2f}**")
+
+            # Botões finais compactos
+            cb1, cb2 = st.columns(2)
+            if cb1.button("🗑️ Limpar"):
                 st.session_state['carrinho'] = []
                 st.rerun()
-                
-            if c_zap2.button("📲 WhatsApp"):
+            if cb2.button("📲 WhatsApp"):
                 zap = t_lista[t_nome]['zap']
                 resumo = "\n".join([f"{it['Item']}: R$ {it['Preco']:.2f}" for it in st.session_state['carrinho']])
-                msg = f"Orçamento Ribeira Vet para {t_nome}:\n\n{resumo}\n\n*Total: R$ {total_geral:.2f}*"
-                link = f"https://wa.me/{zap}?text={urllib.parse.quote(msg)}"
-                st.markdown(f"#### [Clique para Enviar]({link})")
-        else:
-            st.info("O seu caderno de orçamento está vazio.")
-    else:
-        st.warning("Cadastre um tutor primeiro.")
+                link = f"https://wa.me/{zap}?text={urllib.parse.quote(f'Orçamento:\n{resumo}\nTotal: R$ {total:.2f}')}"
+                st.markdown(f"[👉 Enviar Recibo]({link})")
