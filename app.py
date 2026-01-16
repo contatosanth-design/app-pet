@@ -107,47 +107,52 @@ elif menu == "👤 Tutores":
         st.table(df_tutores)
 
 # =========================================================
-# MÓDULO 2: PETS (VÍNCULO COM TUTOR)
+# MÓDULO 2: PETS (CORREÇÃO DE BOTÃO E LAYOUT)
 # =========================================================
 elif menu == "🐾 Pets":
     st.subheader("🐾 Gestão de Pacientes")
 
-    with st.form("form_pet", clear_on_submit=True):
-        # Distribuição de espaço inspirada no seu Canva
-        c1, c2 = st.columns([2, 1])
+    # Iniciamos o formulário
+    with st.form("form_paciente_final", clear_on_submit=True):
+        # Primeira Linha: Nome e Espécie
+        c1, c2 = st.columns([3, 1])
         nome_pet = c1.text_input("Nome do Pet (Obrigatório) *")
         especie = c2.selectbox("Espécie", ["Cão", "Gato", "Outro"])
         
+        # Segunda Linha: Raça e Idade
         c3, c4 = st.columns([1, 1])
         raca = c3.text_input("Raça")
         idade = c4.text_input("Idade (Ex: 2 anos)")
 
-        # Vincula ao Tutor que já está cadastrado no Módulo 1
+        # Seleção do Tutor (Puxa do Módulo 1)
         if st.session_state['clientes']:
-            lista_tutores = [t['NOME'] for t in st.session_state['clientes']]
-            tutor_responsavel = st.selectbox("Tutor Responsável", lista_tutores)
+            lista_nomes = [cli['NOME'] for cli in st.session_state['clientes']]
+            tutor_vinculo = st.selectbox("Tutor Responsável", lista_nomes)
         else:
             st.warning("⚠️ Cadastre um Tutor no Módulo 1 primeiro!")
-            tutor_responsavel = "Não vinculado"
+            tutor_vinculo = "Sem Tutor"
 
-        if st.form_submit_button("💾 Salvar Paciente"):
+        # O BOTÃO QUE ESTAVA FALTANDO (Precisa estar dentro do 'with')
+        botao_salvar = st.form_submit_button("💾 Salvar Cadastro do Pet")
+
+        if botao_salvar:
             if nome_pet:
                 novo_pet = {
                     "PET": nome_pet.upper(),
-                    "TUTOR": tutor_responsavel,
+                    "TUTOR": tutor_vinculo,
                     "ESPÉCIE": especie,
                     "RAÇA": raca if raca else "---",
                     "IDADE": idade if idade else "---"
                 }
                 st.session_state['pets'].append(novo_pet)
-                st.success(f"Paciente {nome_pet.upper()} cadastrado!")
+                st.success(f"Paciente {nome_pet.upper()} cadastrado com sucesso!")
                 st.rerun()
             else:
-                st.error("O nome do Pet é obrigatório.")
+                st.error("O Nome do Pet é obrigatório.")
 
     st.divider()
 
-    # Lista de Pets com Numeração e Grade
+    # Lista de Pets em Grade (Estilo Excel)
     if st.session_state['pets']:
         st.write("📋 **Pacientes Cadastrados**")
         df_pets = pd.DataFrame(st.session_state['pets'])
