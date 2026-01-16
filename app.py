@@ -152,14 +152,17 @@ elif menu == "🩺 Prontuário IA":
         st.info("Nenhum pet cadastrado para atendimento.")
 
 # =========================================================
-# MÓDULO 4: FINANCEIRO (PREÇOS LIMPOS - 2 CASAS)
+# MÓDULO 4: FINANCEIRO (CABECALHO COMPLETO COM LOGO)
 # =========================================================
 elif menu == "💰 Financeiro":
-    # Cabeçalho Estilo Canva
+    # Cabeçalho com o ícone do cachorrinho médico
     st.markdown("""
-        <div style="border: 2px solid black; padding: 10px; text-align: center; background-color: white;">
-            <b style="font-size: 20px;">CONSULTÓRIO VETERINÁRIO RIBEIRA</b><br>
-            <span>CRVV-RJ 9862 Ricardo Santos</span>
+        <div style="display: flex; align-items: center; border: 2px solid black; padding: 10px; background-color: white; border-radius: 5px;">
+            <div style="font-size: 50px; margin-right: 20px;">🐶⚕️</div>
+            <div style="text-align: left;">
+                <b style="font-size: 22px; color: #333;">Consultório Veterinário Ribeira</b><br>
+                <span style="font-size: 14px; color: #666;">CRVV-RJ 9862 Ricardo Santos</span>
+            </div>
         </div>
     """, unsafe_allow_html=True)
     
@@ -167,29 +170,30 @@ elif menu == "💰 Financeiro":
 
     if 'carrinho' not in st.session_state: st.session_state['carrinho'] = []
 
-    # Seletor de Itens
-    with st.expander("🔍 TABELA DE PREÇOS", expanded=st.session_state.get('gaveta_aberta', False)):
+    # 1. Tabela de Preços (Seletor)
+    with st.expander("📋 TABELA DE PREÇOS", expanded=st.session_state.get('gaveta_aberta', False)):
         for idx, produto in enumerate(st.session_state['estoque']):
             c1, c2, c3 = st.columns([3, 1, 1])
             c1.write(f"**{produto['Item']}**")
             c2.write(f"R$ {produto['Preco']:.2f}")
-            if c3.button("➕", key=f"add_fmt_{idx}"):
+            if c3.button("➕", key=f"add_final_{idx}"):
                 st.session_state['carrinho'].append(produto)
                 st.session_state['gaveta_aberta'] = False
                 st.rerun()
 
+    # 2. Orçamento com Preços Formatados
     if st.session_state['carrinho']:
         st.markdown("### 📝 Orçamento Atual")
         
-        # Criando a tabela e formatando os números
-        df_exibir = pd.DataFrame(st.session_state['carrinho'])
-        df_exibir.index = range(1, len(df_exibir) + 1)
+        df_excluir = pd.DataFrame(st.session_state['carrinho'])
+        df_excluir.index = range(1, len(df_excluir) + 1)
         
-        # A MÁGICA: Formata a coluna Preco para mostrar apenas 2 casas decimais
-        df_exibir['Preco'] = df_exibir['Preco'].map('R$ {:,.2f}'.format)
+        # Formatação de Moeda
+        df_mostrar = df_excluir.copy()
+        df_mostrar['Preco'] = df_mostrar['Preco'].map('R$ {:,.2f}'.format)
         
-        # Exibe a tabela com as colunas renomeadas como no seu rascunho
-        st.table(df_exibir.rename(columns={'Item': 'DESCRIÇÃO', 'Preco': 'VALOR'})) 
+        # Tabela Estável
+        st.table(df_mostrar.rename(columns={'Item': 'DESCRIÇÃO', 'Preco': 'VALOR'})) 
 
         # Totalizador
         total = sum(item['Preco'] for item in st.session_state['carrinho'])
@@ -199,17 +203,19 @@ elif menu == "💰 Financeiro":
         col_rem, col_limp, col_zap = st.columns([2, 1, 1])
         
         with col_rem:
-            idx_escolhido = st.number_input("Remover item nº:", min_value=1, max_value=len(st.session_state['carrinho']), step=1)
-            if st.button("❌ Remover"):
-                st.session_state['carrinho'].pop(int(idx_escolhido)-1)
+            idx_rem = st.number_input("Remover item nº:", min_value=1, max_value=len(st.session_state['carrinho']), step=1)
+            if st.button("❌ Remover Item"):
+                st.session_state['carrinho'].pop(int(idx_rem)-1)
                 st.rerun()
         
-        if col_limp.button("🗑️ Limpar Tudo"):
+        if col_limp.button("🗑️ Limpar"):
             st.session_state['carrinho'] = []
             st.rerun()
             
         if col_zap.button("📲 WhatsApp"):
-            st.success("Orçamento pronto para envio!")# =========================================================
+            st.success("Link gerado!"))
+            
+# =========================================================
 # MÓDULO 5: GESTÃO DE TABELA DE PREÇOS (IMPORTADOR)
 # =========================================================
 elif menu == "⚙️ Tabela de Preços":
