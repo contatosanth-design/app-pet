@@ -60,50 +60,64 @@ if menu == "🏠 Dashboard":
         st.info("Nenhum atendimento hoje. A lista aparecerá aqui após usar o Prontuário.")
 
 # =========================================================
-# MÓDULO 1: TUTORES (DISTRIBUIÇÃO DE ESPAÇO OTIMIZADA)
+# MÓDULO 1: TUTORES (VERSÃO COM CPF E BUSCA)
 # =========================================================
 elif menu == "👤 Tutores":
     st.subheader("👤 Gestão de Clientes")
 
-    with st.form("form_tutor_v3", clear_on_submit=True):
-        # Primeira Linha: Nome e Telefone (conforme sua imagem)
+    # --- NOVO: CAMPO DE BUSCA RÁPIDA ---
+    busca = st.text_input("🔍 Buscar Cliente Cadastrado (Digite o nome):")
+    
+    if busca:
+        # Filtra a lista de clientes pelo que o usuário digitou
+        resultados = [c for c in st.session_state['clientes'] if busca.upper() in c['NOME']]
+        if resultados:
+            st.write("🎯 **Resultado da Busca:**")
+            df_busca = pd.DataFrame(resultados)
+            st.table(df_busca)
+        else:
+            st.warning("Nenhum cliente encontrado com esse nome.")
+    
+    st.divider()
+
+    # --- FORMULÁRIO DE CADASTRO ---
+    st.write("📝 **Novo Cadastro**")
+    with st.form("form_tutor_v4", clear_on_submit=True):
         c1, c2 = st.columns([3, 1])
         nome = c1.text_input("Nome Completo (Obrigatório) *")
         zap = c2.text_input("Telefone/WhatsApp")
         
-        # Segunda Linha: Endereço (espaço total para endereços longos)
-        endereco = st.text_input("Endereço Completo (Opcional)")
+        # CPF reincluído conforme solicitado
+        c3, c4 = st.columns([1, 1])
+        cpf = c3.text_input("CPF (Opcional)")
+        email = c4.text_input("E-mail (Opcional)")
         
-        # Terceira Linha: E-mail (opcional)
-        email = st.text_input("E-mail (Opcional)")
+        endereco = st.text_input("Endereço Completo")
         
-        if st.form_submit_button("💾 Salvar Cadastro"):
+        if st.form_submit_button("💾 Salvar Cliente"):
             if nome:
                 novo_tutor = {
                     "NOME": nome.upper(),
+                    "CPF": cpf if cpf else "---",
                     "TEL": zap if zap else "---",
                     "ENDEREÇO": endereco if endereco else "---",
                     "E-MAIL": email if email else "---"
                 }
                 st.session_state['clientes'].append(novo_tutor)
-                # Reorganiza em Ordem Alfabética
+                # Mantém a ordem alfabética da agenda
                 st.session_state['clientes'] = sorted(st.session_state['clientes'], key=lambda x: x['NOME'])
-                st.success(f"Tutor {nome.upper()} salvo e organizado!")
+                st.success(f"Tutor {nome.upper()} cadastrado!")
                 st.rerun()
             else:
-                st.error("O Nome é obrigatório para o cadastro.")
+                st.error("O campo Nome é obrigatório.")
 
     st.divider()
     
-    # Lista com numeração automática e visual de grade
+    # Lista Completa com numeração
     if st.session_state['clientes']:
-        st.write("📋 **Lista de Clientes Cadastrados**")
+        st.write("📋 **Lista Geral de Clientes**")
         df_tutores = pd.DataFrame(st.session_state['clientes'])
-        
-        # Numeração 01, 02... conforme o padrão do orçamento
         df_tutores.index = [f"{i+1:02d}" for i in range(len(df_tutores))]
-        
-        # Exibe a tabela com as linhas pretas (st.table é mais estável no notebook)
         st.table(df_tutores)
 
 # =========================================================
