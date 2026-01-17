@@ -88,3 +88,18 @@ elif menu == "💰 Financeiro":
 else:
     st.subheader("📋 Prontuário (Ditado: Win+H)")
     st.text_area("Relato Clínico:", height=300)
+# =========================================================
+# MÓDULO 6: BACKUP (DRIVE EXTERNO)
+# =========================================================
+elif menu == "💾 Backup Externo":
+    st.subheader("💾 Salvar no Pendrive/HD")
+    
+    # Clientes
+    if st.session_state['clientes']:
+        df_c = pd.DataFrame(st.session_state['clientes'])
+        st.download_button("📥 Baixar Clientes (Excel)", df_c.to_csv(index=False).encode('utf-8-sig'), "clientes.csv", "text/csv")
+    
+    # Pets
+    if st.session_state['pets']:
+        df_p = pd.DataFrame(st.session_state['pets'])
+        st.download_button("📥 Baixar Pets (Excel)", df_p.to_csv(index=False).encode('utf-8-sig'), "pets.csv", "text/csv")
