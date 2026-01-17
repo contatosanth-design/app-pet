@@ -18,7 +18,7 @@ if 'estoque' not in st.session_state:
 # 2. MENU LATERAL
 with st.sidebar:
     st.title("Ribeira Vet Pro")
-    menu = st.radio("NAVEGAÇÃO", ["👤 Tutores", "🐾 Pets", "📋 Prontuário IA", "💰 Financeiro"])
+    menu = st.radio("NAVEGAÇÃO", ["👤 Tutores", "🐾 Pets", "📋 Prontuário IA", "💰 Financeiro", "⚙️ Tabela", "💾 Backup"])
 
 # 3. MÓDULO 1: TUTORES (COM CPF E BUSCA)
 if menu == "👤 Tutores":
