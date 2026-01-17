@@ -65,25 +65,34 @@ elif menu == "🐾 Pets":
     if st.session_state['pets']:
         st.table(pd.DataFrame(st.session_state['pets']))
 
-# 5. MÓDULO 4: FINANCEIRO (FORMATADO)
+# 5. FINANCEIRO E TABELA
 elif menu == "💰 Financeiro":
     st.markdown("<div style='border:2px solid black;padding:10px;text-align:center;'><b>CONSULTÓRIO RIBEIRA</b></div>", unsafe_allow_html=True)
-    with st.expander("🔍 TABELA DE PREÇOS"):
-        for i, p in enumerate(st.session_state['estoque']):
-            c1, c2, c3 = st.columns([3, 1, 1])
-            c1.write(p['Item'])
-            c2.write(f"R$ {p['Preco']:.2f}")
-            if c3.button("➕", key=f"btn_{i}"):
-                st.session_state['carrinho'].append(p)
-                st.rerun()
     if st.session_state['carrinho']:
         df_c = pd.DataFrame(st.session_state['carrinho'])
-        df_c['Preco'] = df_c['Preco'].map('R$ {:,.2f}'.format)
         st.table(df_c.rename(columns={'Item': 'DESCRIÇÃO', 'Preco': 'VALOR'}))
         if st.button("🗑️ Limpar"):
-            st.session_state['carrinho'] = []
-            st.rerun()
+            st.session_state['carrinho'] = []; st.rerun()
 
+elif menu == "⚙️ Tabela":
+    for i, p in enumerate(st.session_state['estoque']):
+        c1, c2, c3 = st.columns([3, 1, 1])
+        c1.write(p['Item']); c2.write(f"R$ {p['Preco']:.2f}")
+        if c3.button("➕", key=f"add_{i}"):
+            st.session_state['carrinho'].append(p); st.success("Adicionado!")
+
+# 6. BACKUP (DRIVE EXTERNO)
+elif menu == "💾 Backup":
+    st.subheader("💾 Salvar no Pendrive")
+    if st.session_state['clientes']:
+        st.download_button("📥 Clientes", pd.DataFrame(st.session_state['clientes']).to_csv(index=False).encode('utf-8-sig'), "clientes.csv")
+    if st.session_state['pets']:
+        st.download_button("📥 Pets", pd.DataFrame(st.session_state['pets']).to_csv(index=False).encode('utf-8-sig'), "pets.csv")
+
+# 7. PRONTUÁRIO
+else:
+    st.subheader("📋 Prontuário (Win+H)")
+    st.text_area("Relato:", height=200)
 # 6. MÓDULO 3: PRONTUÁRIO
 else:
     st.subheader("📋 Prontuário (Ditado: Win+H)")
