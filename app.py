@@ -2,12 +2,14 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# 1. CONFIGURAÇÃO E BANCO DE DADOS
+# 1. CONFIGURAÇÃO INICIAL
 st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
 
-if 'clientes' not in st.session_state: st.session_state['clientes'] = []
-if 'pets' not in st.session_state: st.session_state['pets'] = []
-if 'carrinho' not in st.session_state: st.session_state['carrinho'] = []
+# Inicializa as listas se não existirem
+for k in ['clientes', 'pets', 'carrinho']:
+    if k not in st.session_state: st.session_state[k] = []
+
+# Estoque fixo inicial
 if 'estoque' not in st.session_state:
     st.session_state['estoque'] = [
         {"Item": "CONSULTA CLÍNICA", "Preco": 150.0},
@@ -17,98 +19,64 @@ if 'estoque' not in st.session_state:
 
 # 2. MENU LATERAL
 with st.sidebar:
-    st.title("Ribeira Vet Pro")
-    menu = st.radio("NAVEGAÇÃO", ["👤 Tutores", "🐾 Pets", "📋 Prontuário IA", "💰 Financeiro", "⚙️ Tabela", "💾 Backup"])
+    st.title("🐾 Ribeira Vet Pro")
+    menu = st.radio("NAVEGAÇÃO", ["👤 Tutores", "🐾 Pets", "📋 Prontuário", "💰 Financeiro", "💾 Backup"])
 
 # 3. MÓDULO 1: TUTORES (COM CPF E BUSCA)
 if menu == "👤 Tutores":
-    st.subheader("👤 Gestão de Clientes")
-    
-    # Busca por nome
-    busca = st.text_input("🔍 Buscar Cliente:")
+    st.subheader("👤 Cadastro de Clientes")
+    busca = st.text_input("🔍 Buscar por Nome:")
     if busca:
         res = [c for c in st.session_state['clientes'] if busca.upper() in c['NOME']]
         if res: st.table(pd.DataFrame(res))
-
-    with st.form("form_tutor_v12", clear_on_submit=True):
-        c1, c2 = st.columns([3, 1])
-        nome = c1.text_input("Nome Completo *")
-        zap = c2.text_input("Telefone")
-        c3, c4 = st.columns([1, 1])
-        cpf = c3.text_input("CPF")
-        email = c4.text_input("E-mail")
-        end = st.text_input("Endereço Completo")
-        if st.form_submit_button("💾 Salvar Cadastro"):
-            if nome:
-                novo = {"NOME": nome.upper(), "CPF": cpf, "TEL": zap, "ENDEREÇO": end, "E-MAIL": email}
-                st.session_state['clientes'].append(novo)
+    
+    with st.form("f_tutor"):
+        n = st.text_input("Nome Completo *")
+        c = st.text_input("CPF")
+        t = st.text_input("Telefone")
+        if st.form_submit_button("💾 Salvar"):
+            if n:
+                st.session_state['clientes'].append({"NOME": n.upper(), "CPF": c, "TEL": t})
                 st.session_state['clientes'] = sorted(st.session_state['clientes'], key=lambda x: x['NOME'])
                 st.rerun()
-
-    if st.session_state['clientes']:
-        df_t = pd.DataFrame(st.session_state['clientes'])
-        df_t.index = [f"{i+1:02d}" for i in range(len(df_t))]
-        st.table(df_t)
+    if st.session_state['clientes']: st.table(pd.DataFrame(st.session_state['clientes']))
 
 # 4. MÓDULO 2: PETS
 elif menu == "🐾 Pets":
-    st.subheader("🐾 Gestão de Pacientes")
-    with st.form("form_pet_v12"):
-        c1, c2 = st.columns([3, 1])
-        n_pet = c1.text_input("Nome do Pet *")
-        esp = c2.selectbox("Espécie", ["Cão", "Gato", "Outro"])
-        rac = st.text_input("Raça")
+    st.subheader("🐾 Cadastro de Pacientes")
+    with st.form("f_pet"):
+        p = st.text_input("Nome do Pet *")
+        e = st.selectbox("Espécie", ["Cão", "Gato", "Outro"])
         if st.form_submit_button("💾 Salvar Pet"):
-            if n_pet:
-                st.session_state['pets'].append({"PET": n_pet.upper(), "ESPÉCIE": esp, "RAÇA": rac})
+            if p:
+                st.session_state['pets'].append({"PET": p.upper(), "TIPO": e})
                 st.rerun()
-    if st.session_state['pets']:
-        st.table(pd.DataFrame(st.session_state['pets']))
+    if st.session_state['pets']: st.table(pd.DataFrame(st.session_state['pets']))
 
-# 5. FINANCEIRO E TABELA
+# 5. MÓDULO 3: PRONTUÁRIO
+elif menu == "📋 Prontuário":
+    st.subheader("📋 Prontuário (Ditado: Win+H)")
+    st.text_area("Descreva o atendimento clínico:", height=300)
+
+# 6. MÓDULO 4: FINANCEIRO
 elif menu == "💰 Financeiro":
-    st.markdown("<div style='border:2px solid black;padding:10px;text-align:center;'><b>CONSULTÓRIO RIBEIRA</b></div>", unsafe_allow_html=True)
+    st.subheader("💰 Orçamento e Preços")
+    for i, item in enumerate(st.session_state['estoque']):
+        if st.button(f"➕ {item['Item']} (R$ {item['Preco']:.2f})", key=i):
+            st.session_state['carrinho'].append(item)
+            st.success(f"{item['Item']} adicionado!")
     if st.session_state['carrinho']:
-        df_c = pd.DataFrame(st.session_state['carrinho'])
-        st.table(df_c.rename(columns={'Item': 'DESCRIÇÃO', 'Preco': 'VALOR'}))
-        if st.button("🗑️ Limpar"):
+        st.divider()
+        st.table(pd.DataFrame(st.session_state['carrinho']))
+        if st.button("🗑️ Limpar Tudo"):
             st.session_state['carrinho'] = []; st.rerun()
 
-elif menu == "⚙️ Tabela":
-    for i, p in enumerate(st.session_state['estoque']):
-        c1, c2, c3 = st.columns([3, 1, 1])
-        c1.write(p['Item']); c2.write(f"R$ {p['Preco']:.2f}")
-        if c3.button("➕", key=f"add_{i}"):
-            st.session_state['carrinho'].append(p); st.success("Adicionado!")
-
-# 6. BACKUP (DRIVE EXTERNO)
+# 7. MÓDULO 6: BACKUP (DRIVE EXTERNO)
 elif menu == "💾 Backup":
-    st.subheader("💾 Salvar no Pendrive")
-    if st.session_state['clientes']:
-        st.download_button("📥 Clientes", pd.DataFrame(st.session_state['clientes']).to_csv(index=False).encode('utf-8-sig'), "clientes.csv")
-    if st.session_state['pets']:
-        st.download_button("📥 Pets", pd.DataFrame(st.session_state['pets']).to_csv(index=False).encode('utf-8-sig'), "pets.csv")
-
-# 7. PRONTUÁRIO
-else:
-    st.subheader("📋 Prontuário (Win+H)")
-    st.text_area("Relato:", height=200)
-# 6. MÓDULO 3: PRONTUÁRIO
-else:
-    st.subheader("📋 Prontuário (Ditado: Win+H)")
-    st.text_area("Relato Clínico:", height=300)
-# =========================================================
-# MÓDULO 6: BACKUP (DRIVE EXTERNO)
-# =========================================================
-elif menu == "💾 Backup Externo":
-    st.subheader("💾 Salvar no Pendrive/HD")
-    
-    # Clientes
+    st.subheader("💾 Exportar para Drive Externo")
     if st.session_state['clientes']:
         df_c = pd.DataFrame(st.session_state['clientes'])
-        st.download_button("📥 Baixar Clientes (Excel)", df_c.to_csv(index=False).encode('utf-8-sig'), "clientes.csv", "text/csv")
-    
-    # Pets
+        st.download_button("📥 Baixar Excel de Clientes", df_c.to_csv(index=False).encode('utf-8-sig'), "clientes.csv")
     if st.session_state['pets']:
         df_p = pd.DataFrame(st.session_state['pets'])
-        st.download_button("📥 Baixar Pets (Excel)", df_p.to_csv(index=False).encode('utf-8-sig'), "pets.csv", "text/csv")
+        st.download_button("📥 Baixar Excel de Pets", df_p.to_csv(index=False).encode('utf-8-sig'), "pets.csv")
