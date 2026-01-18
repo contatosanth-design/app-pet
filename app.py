@@ -73,6 +73,312 @@ elif menu == "🐾 Pets":
                             "ESP": esp, "RAÇA": rac, "NASC": nasc
                         })
                         st.success(f"{n_pet} cadastrado com sucesso!")
+                        st.rerun()# 4. MÓDULO 2: PETS (A RAÇA VOLTOU E ESTÁ TRAVADA)
+elif menu == "🐾 Pets":
+    st.subheader("🐾 Pacientes e Raças")
+    tutores_disp = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
+    
+    if not tutores_disp:
+        st.warning("⚠️ Cadastre um Tutor primeiro!")
+    else:
+        tutor_sel = st.selectbox("Selecione o Tutor:", tutores_disp)
+        
+        # Mostra os animais já existentes deste tutor
+        pets_do_tutor = [p for p in st.session_state['pets'] if p.get('TUTOR') == tutor_sel]
+        if pets_do_tutor:
+            st.write(f"✅ **Pacientes de {tutor_sel}:**")
+            st.table(pd.DataFrame(pets_do_tutor)[["PET", "ESP", "RAÇA", "NASC"]])
+
+        # Formulário para novo pet COM CAMPO DE RAÇA EXPLÍCITO
+        with st.expander("➕ Adicionar Novo Animal para este Tutor", expanded=True):
+            with st.form("f_pet_v95"):
+                c1, c2 = st.columns(2)
+                n_pet = c1.text_input("Nome do Pet *").upper()
+                nasc = c2.text_input("Nascimento", value=datetime.now().strftime('%d/%m/%Y'))
+                
+                c3, c4 = st.columns(2)
+                esp = c3.selectbox("Espécie", ["Cão", "Gato", "Outro"])
+                rac = c4.text_input("Raça (Ex: Bulldog, SRD) *").upper() # AQUI ESTÁ A RAÇA!
+                
+                if st.form_submit_button("💾 Salvar Animal"):
+                    if n_pet and rac:
+                        st.session_state['pets'].append({
+                            "PET": n_pet, "TUTOR": tutor_sel, 
+                            "ESP": esp, "RAÇA": rac, "NASC": nasc
+                        })
+                        st.success(f"{n_pet} cadastrado com sucesso!")
+                        st.rerun()# 4. MÓDULO 2: PETS (A RAÇA VOLTOU E ESTÁ TRAVADA)
+elif menu == "🐾 Pets":
+    st.subheader("🐾 Pacientes e Raças")
+    tutores_disp = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
+    
+    if not tutores_disp:
+        st.warning("⚠️ Cadastre um Tutor primeiro!")
+    else:
+        tutor_sel = st.selectbox("Selecione o Tutor:", tutores_disp)
+        
+        # Mostra os animais já existentes deste tutor
+        pets_do_tutor = [p for p in st.session_state['pets'] if p.get('TUTOR') == tutor_sel]
+        if pets_do_tutor:
+            st.write(f"✅ **Pacientes de {tutor_sel}:**")
+            st.table(pd.DataFrame(pets_do_tutor)[["PET", "ESP", "RAÇA", "NASC"]])
+
+        # Formulário para novo pet COM CAMPO DE RAÇA EXPLÍCITO
+        with st.expander("➕ Adicionar Novo Animal para este Tutor", expanded=True):
+            with st.form("f_pet_v95"):
+                c1, c2 = st.columns(2)
+                n_pet = c1.text_input("Nome do Pet *").upper()
+                nasc = c2.text_input("Nascimento", value=datetime.now().strftime('%d/%m/%Y'))
+                
+                c3, c4 = st.columns(2)
+                esp = c3.selectbox("Espécie", ["Cão", "Gato", "Outro"])
+                rac = c4.text_input("Raça (Ex: Bulldog, SRD) *").upper() # AQUI ESTÁ A RAÇA!
+                
+                if st.form_submit_button("💾 Salvar Animal"):
+                    if n_pet and rac:
+                        st.session_state['pets'].append({
+                            "PET": n_pet, "TUTOR": tutor_sel, 
+                            "ESP": esp, "RAÇA": rac, "NASC": nasc
+                        })
+                        st.success(f"{n_pet} cadastrado com sucesso!")
+                        st.rerun()# 4. MÓDULO 2: PETS (A RAÇA VOLTOU E ESTÁ TRAVADA)
+elif menu == "🐾 Pets":
+    st.subheader("🐾 Pacientes e Raças")
+    tutores_disp = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
+    
+    if not tutores_disp:
+        st.warning("⚠️ Cadastre um Tutor primeiro!")
+    else:
+        tutor_sel = st.selectbox("Selecione o Tutor:", tutores_disp)
+        
+        # Mostra os animais já existentes deste tutor
+        pets_do_tutor = [p for p in st.session_state['pets'] if p.get('TUTOR') == tutor_sel]
+        if pets_do_tutor:
+            st.write(f"✅ **Pacientes de {tutor_sel}:**")
+            st.table(pd.DataFrame(pets_do_tutor)[["PET", "ESP", "RAÇA", "NASC"]])
+
+        # Formulário para novo pet COM CAMPO DE RAÇA EXPLÍCITO
+        with st.expander("➕ Adicionar Novo Animal para este Tutor", expanded=True):
+            with st.form("f_pet_v95"):
+                c1, c2 = st.columns(2)
+                n_pet = c1.text_input("Nome do Pet *").upper()
+                nasc = c2.text_input("Nascimento", value=datetime.now().strftime('%d/%m/%Y'))
+                
+                c3, c4 = st.columns(2)
+                esp = c3.selectbox("Espécie", ["Cão", "Gato", "Outro"])
+                rac = c4.text_input("Raça (Ex: Bulldog, SRD) *").upper() # AQUI ESTÁ A RAÇA!
+                
+                if st.form_submit_button("💾 Salvar Animal"):
+                    if n_pet and rac:
+                        st.session_state['pets'].append({
+                            "PET": n_pet, "TUTOR": tutor_sel, 
+                            "ESP": esp, "RAÇA": rac, "NASC": nasc
+                        })
+                        st.success(f"{n_pet} cadastrado com sucesso!")
+                        st.rerun()# 4. MÓDULO 2: PETS (A RAÇA VOLTOU E ESTÁ TRAVADA)
+elif menu == "🐾 Pets":
+    st.subheader("🐾 Pacientes e Raças")
+    tutores_disp = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
+    
+    if not tutores_disp:
+        st.warning("⚠️ Cadastre um Tutor primeiro!")
+    else:
+        tutor_sel = st.selectbox("Selecione o Tutor:", tutores_disp)
+        
+        # Mostra os animais já existentes deste tutor
+        pets_do_tutor = [p for p in st.session_state['pets'] if p.get('TUTOR') == tutor_sel]
+        if pets_do_tutor:
+            st.write(f"✅ **Pacientes de {tutor_sel}:**")
+            st.table(pd.DataFrame(pets_do_tutor)[["PET", "ESP", "RAÇA", "NASC"]])
+
+        # Formulário para novo pet COM CAMPO DE RAÇA EXPLÍCITO
+        with st.expander("➕ Adicionar Novo Animal para este Tutor", expanded=True):
+            with st.form("f_pet_v95"):
+                c1, c2 = st.columns(2)
+                n_pet = c1.text_input("Nome do Pet *").upper()
+                nasc = c2.text_input("Nascimento", value=datetime.now().strftime('%d/%m/%Y'))
+                
+                c3, c4 = st.columns(2)
+                esp = c3.selectbox("Espécie", ["Cão", "Gato", "Outro"])
+                rac = c4.text_input("Raça (Ex: Bulldog, SRD) *").upper() # AQUI ESTÁ A RAÇA!
+                
+                if st.form_submit_button("💾 Salvar Animal"):
+                    if n_pet and rac:
+                        st.session_state['pets'].append({
+                            "PET": n_pet, "TUTOR": tutor_sel, 
+                            "ESP": esp, "RAÇA": rac, "NASC": nasc
+                        })
+                        st.success(f"{n_pet} cadastrado com sucesso!")
+                        st.rerun()# 4. MÓDULO 2: PETS (A RAÇA VOLTOU E ESTÁ TRAVADA)
+elif menu == "🐾 Pets":
+    st.subheader("🐾 Pacientes e Raças")
+    tutores_disp = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
+    
+    if not tutores_disp:
+        st.warning("⚠️ Cadastre um Tutor primeiro!")
+    else:
+        tutor_sel = st.selectbox("Selecione o Tutor:", tutores_disp)
+        
+        # Mostra os animais já existentes deste tutor
+        pets_do_tutor = [p for p in st.session_state['pets'] if p.get('TUTOR') == tutor_sel]
+        if pets_do_tutor:
+            st.write(f"✅ **Pacientes de {tutor_sel}:**")
+            st.table(pd.DataFrame(pets_do_tutor)[["PET", "ESP", "RAÇA", "NASC"]])
+
+        # Formulário para novo pet COM CAMPO DE RAÇA EXPLÍCITO
+        with st.expander("➕ Adicionar Novo Animal para este Tutor", expanded=True):
+            with st.form("f_pet_v95"):
+                c1, c2 = st.columns(2)
+                n_pet = c1.text_input("Nome do Pet *").upper()
+                nasc = c2.text_input("Nascimento", value=datetime.now().strftime('%d/%m/%Y'))
+                
+                c3, c4 = st.columns(2)
+                esp = c3.selectbox("Espécie", ["Cão", "Gato", "Outro"])
+                rac = c4.text_input("Raça (Ex: Bulldog, SRD) *").upper() # AQUI ESTÁ A RAÇA!
+                
+                if st.form_submit_button("💾 Salvar Animal"):
+                    if n_pet and rac:
+                        st.session_state['pets'].append({
+                            "PET": n_pet, "TUTOR": tutor_sel, 
+                            "ESP": esp, "RAÇA": rac, "NASC": nasc
+                        })
+                        st.success(f"{n_pet} cadastrado com sucesso!")
+                        st.rerun()# 4. MÓDULO 2: PETS (A RAÇA VOLTOU E ESTÁ TRAVADA)
+elif menu == "🐾 Pets":
+    st.subheader("🐾 Pacientes e Raças")
+    tutores_disp = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
+    
+    if not tutores_disp:
+        st.warning("⚠️ Cadastre um Tutor primeiro!")
+    else:
+        tutor_sel = st.selectbox("Selecione o Tutor:", tutores_disp)
+        
+        # Mostra os animais já existentes deste tutor
+        pets_do_tutor = [p for p in st.session_state['pets'] if p.get('TUTOR') == tutor_sel]
+        if pets_do_tutor:
+            st.write(f"✅ **Pacientes de {tutor_sel}:**")
+            st.table(pd.DataFrame(pets_do_tutor)[["PET", "ESP", "RAÇA", "NASC"]])
+
+        # Formulário para novo pet COM CAMPO DE RAÇA EXPLÍCITO
+        with st.expander("➕ Adicionar Novo Animal para este Tutor", expanded=True):
+            with st.form("f_pet_v95"):
+                c1, c2 = st.columns(2)
+                n_pet = c1.text_input("Nome do Pet *").upper()
+                nasc = c2.text_input("Nascimento", value=datetime.now().strftime('%d/%m/%Y'))
+                
+                c3, c4 = st.columns(2)
+                esp = c3.selectbox("Espécie", ["Cão", "Gato", "Outro"])
+                rac = c4.text_input("Raça (Ex: Bulldog, SRD) *").upper() # AQUI ESTÁ A RAÇA!
+                
+                if st.form_submit_button("💾 Salvar Animal"):
+                    if n_pet and rac:
+                        st.session_state['pets'].append({
+                            "PET": n_pet, "TUTOR": tutor_sel, 
+                            "ESP": esp, "RAÇA": rac, "NASC": nasc
+                        })
+                        st.success(f"{n_pet} cadastrado com sucesso!")
+                        st.rerun()# 4. MÓDULO 2: PETS (A RAÇA VOLTOU E ESTÁ TRAVADA)
+elif menu == "🐾 Pets":
+    st.subheader("🐾 Pacientes e Raças")
+    tutores_disp = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
+    
+    if not tutores_disp:
+        st.warning("⚠️ Cadastre um Tutor primeiro!")
+    else:
+        tutor_sel = st.selectbox("Selecione o Tutor:", tutores_disp)
+        
+        # Mostra os animais já existentes deste tutor
+        pets_do_tutor = [p for p in st.session_state['pets'] if p.get('TUTOR') == tutor_sel]
+        if pets_do_tutor:
+            st.write(f"✅ **Pacientes de {tutor_sel}:**")
+            st.table(pd.DataFrame(pets_do_tutor)[["PET", "ESP", "RAÇA", "NASC"]])
+
+        # Formulário para novo pet COM CAMPO DE RAÇA EXPLÍCITO
+        with st.expander("➕ Adicionar Novo Animal para este Tutor", expanded=True):
+            with st.form("f_pet_v95"):
+                c1, c2 = st.columns(2)
+                n_pet = c1.text_input("Nome do Pet *").upper()
+                nasc = c2.text_input("Nascimento", value=datetime.now().strftime('%d/%m/%Y'))
+                
+                c3, c4 = st.columns(2)
+                esp = c3.selectbox("Espécie", ["Cão", "Gato", "Outro"])
+                rac = c4.text_input("Raça (Ex: Bulldog, SRD) *").upper() # AQUI ESTÁ A RAÇA!
+                
+                if st.form_submit_button("💾 Salvar Animal"):
+                    if n_pet and rac:
+                        st.session_state['pets'].append({
+                            "PET": n_pet, "TUTOR": tutor_sel, 
+                            "ESP": esp, "RAÇA": rac, "NASC": nasc
+                        })
+                        st.success(f"{n_pet} cadastrado com sucesso!")
+                        st.rerun()# 4. MÓDULO 2: PETS (A RAÇA VOLTOU E ESTÁ TRAVADA)
+elif menu == "🐾 Pets":
+    st.subheader("🐾 Pacientes e Raças")
+    tutores_disp = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
+    
+    if not tutores_disp:
+        st.warning("⚠️ Cadastre um Tutor primeiro!")
+    else:
+        tutor_sel = st.selectbox("Selecione o Tutor:", tutores_disp)
+        
+        # Mostra os animais já existentes deste tutor
+        pets_do_tutor = [p for p in st.session_state['pets'] if p.get('TUTOR') == tutor_sel]
+        if pets_do_tutor:
+            st.write(f"✅ **Pacientes de {tutor_sel}:**")
+            st.table(pd.DataFrame(pets_do_tutor)[["PET", "ESP", "RAÇA", "NASC"]])
+
+        # Formulário para novo pet COM CAMPO DE RAÇA EXPLÍCITO
+        with st.expander("➕ Adicionar Novo Animal para este Tutor", expanded=True):
+            with st.form("f_pet_v95"):
+                c1, c2 = st.columns(2)
+                n_pet = c1.text_input("Nome do Pet *").upper()
+                nasc = c2.text_input("Nascimento", value=datetime.now().strftime('%d/%m/%Y'))
+                
+                c3, c4 = st.columns(2)
+                esp = c3.selectbox("Espécie", ["Cão", "Gato", "Outro"])
+                rac = c4.text_input("Raça (Ex: Bulldog, SRD) *").upper() # AQUI ESTÁ A RAÇA!
+                
+                if st.form_submit_button("💾 Salvar Animal"):
+                    if n_pet and rac:
+                        st.session_state['pets'].append({
+                            "PET": n_pet, "TUTOR": tutor_sel, 
+                            "ESP": esp, "RAÇA": rac, "NASC": nasc
+                        })
+                        st.success(f"{n_pet} cadastrado com sucesso!")
+                        st.rerun()# 4. MÓDULO 2: PETS (A RAÇA VOLTOU E ESTÁ TRAVADA)
+elif menu == "🐾 Pets":
+    st.subheader("🐾 Pacientes e Raças")
+    tutores_disp = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
+    
+    if not tutores_disp:
+        st.warning("⚠️ Cadastre um Tutor primeiro!")
+    else:
+        tutor_sel = st.selectbox("Selecione o Tutor:", tutores_disp)
+        
+        # Mostra os animais já existentes deste tutor
+        pets_do_tutor = [p for p in st.session_state['pets'] if p.get('TUTOR') == tutor_sel]
+        if pets_do_tutor:
+            st.write(f"✅ **Pacientes de {tutor_sel}:**")
+            st.table(pd.DataFrame(pets_do_tutor)[["PET", "ESP", "RAÇA", "NASC"]])
+
+        # Formulário para novo pet COM CAMPO DE RAÇA EXPLÍCITO
+        with st.expander("➕ Adicionar Novo Animal para este Tutor", expanded=True):
+            with st.form("f_pet_v95"):
+                c1, c2 = st.columns(2)
+                n_pet = c1.text_input("Nome do Pet *").upper()
+                nasc = c2.text_input("Nascimento", value=datetime.now().strftime('%d/%m/%Y'))
+                
+                c3, c4 = st.columns(2)
+                esp = c3.selectbox("Espécie", ["Cão", "Gato", "Outro"])
+                rac = c4.text_input("Raça (Ex: Bulldog, SRD) *").upper() # AQUI ESTÁ A RAÇA!
+                
+                if st.form_submit_button("💾 Salvar Animal"):
+                    if n_pet and rac:
+                        st.session_state['pets'].append({
+                            "PET": n_pet, "TUTOR": tutor_sel, 
+                            "ESP": esp, "RAÇA": rac, "NASC": nasc
+                        })
+                        st.success(f"{n_pet} cadastrado com sucesso!")
                         st.rerun()
 
 # 5. MÓDULO 3: PRONTUÁRIO (COM HISTÓRICO VISÍVEL)
