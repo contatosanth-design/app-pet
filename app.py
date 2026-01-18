@@ -71,25 +71,47 @@ elif menu == "🐾 Pets":
     if st.session_state['pets']:
         st.table(pd.DataFrame(st.session_state['pets']).sort_values(by="PET"))
 
-# 5. MÓDULO 3: PRONTUÁRIO (ORDEM ALFABÉTICA)
+# 5. MÓDULO 3: PRONTUÁRIO (CORREÇÃO DA DESCRIÇÃO)
 elif menu == "📋 Prontuário":
     st.subheader("📋 Atendimento Clínico")
-    # Busca pets em ordem alfabética
-    opcoes = sorted([f"{p['PET']} (Tutor: {p.get('TUTOR', 'N/D')})" for p in st.session_state['pets']])
     
-    with st.form("f_atend_v74"):
-        pet_completo = st.selectbox("Buscar Paciente *", ["--- Selecione ---"] + opcoes)
-        c1, c2 = st.columns(2)
-        peso = c1.text_input("Peso (kg)")
-        temp = c2.text_input("Temperatura (°C)")
-        anamnese = st.text_area("🎙️ Anamnese (Win+H):", height=200)
-        if st.form_submit_button("💾 Salvar"):
-            if pet_completo != "--- Selecione ---" and anamnese:
-                st.session_state['historico'].append({"DATA": datetime.now().strftime('%d/%m/%Y %H:%M'), "PACIENTE": pet_completo, "PESO": peso, "TEMP": temp, "RELATO": anamnese})
-                st.session_state['carrinho'].append({"Item": f"CONSULTA: {pet_completo}", "Preco": 150.0})
+    # Busca pets organizados de A a Z
+    opcoes_pets = sorted([f"{p['PET']} (Tutor: {p.get('TUTOR', 'N/D')})" for p in st.session_state['pets']])
+    
+    with st.form("f_atendimento_v80", clear_on_submit=True):
+        paciente = st.selectbox("Buscar Paciente *", ["--- Selecione ---"] + opcoes_pets)
+        
+        col_p, col_t = st.columns(2)
+        v_peso = col_p.text_input("Peso (kg)")
+        v_temp = col_t.text_input("Temperatura (°C)")
+        
+        # Campo de Descrição com identificador fixo para não perder o texto
+        v_relato = st.text_area("🎙️ Anamnese e Exame Clínico (Win+H):", height=250, key="txt_anamnese")
+        
+        if st.form_submit_button("💾 Salvar Atendimento Completo"):
+            if paciente != "--- Selecione ---" and v_relato:
+                # Salva no Histórico
+                st.session_state['historico'].append({
+                    "DATA": datetime.now().strftime('%d/%m/%Y %H:%M'),
+                    "PACIENTE": paciente,
+                    "PESO": v_peso,
+                    "TEMP": v_temp,
+                    "RELATO": v_relato
+                })
+                # Lança no Financeiro
+                st.session_state['carrinho'].append({"Item": f"CONSULTA: {paciente}", "Preco": 150.0})
+                
+                st.success(f"✅ Prontuário de {paciente} salvo com sucesso!")
                 st.rerun()
-    if st.session_state['historico']: st.table(pd.DataFrame(st.session_state['historico']))
+            else:
+                st.error("⚠️ Por favor, selecione o paciente e preencha a descrição.")
 
+    # Exibição do Histórico logo abaixo
+    if st.session_state['historico']:
+        st.write("---")
+        st.write("📂 **Histórico de Atendimentos**")
+        df_hist = pd.DataFrame(st.session_state['historico'])
+        st.table(df_hist[["DATA", "PACIENTE", "PESO", "TEMP", "RELATO"]])
 # MÓDULOS 4 E 5 (FINANCEIRO E BACKUP)
 elif menu == "💰 Financeiro":
     st.subheader("💰 Caixa")
