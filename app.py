@@ -50,19 +50,40 @@ if menu == "👤 Tutores":
         st.write("📋 **Lista Geral**")
         st.table(pd.DataFrame(st.session_state['clientes']))
 
-# 4. MÓDULO 2: PETS
+# 4. MÓDULO 2: PETS (ATUALIZADO COM RAÇAS E ANIVERSÁRIO)
 elif menu == "🐾 Pets":
     st.subheader("🐾 Cadastro de Pacientes")
-    with st.form("f_pet_definitivo"):
-        p = st.text_input("Nome do Pet *")
-        e = st.selectbox("Espécie", ["Cão", "Gato", "Outro"])
-        if st.form_submit_button("💾 Salvar Pet"):
-            if p:
-                st.session_state['pets'].append({"PET": p.upper(), "TIPO": e})
-                st.rerun()
-    if st.session_state['pets']:
-        st.table(pd.DataFrame(st.session_state['pets']))
+    
+    with st.form("f_pet_v17"):
+        c1, c2 = st.columns([2, 1])
+        n_pet = c1.text_input("Nome do Pet *")
+        aniv = c2.date_input("Data de Nascimento", value=datetime.now()) # Campo para parabenização
+        
+        esp = st.selectbox("Espécie", ["Cão", "Gato", "Outro"])
+        
+        # Seleção de Raças Comuns
+        if esp == "Cão":
+            rac = st.selectbox("Raça", ["SRD", "Poodle", "Pinscher", "Shih Tzu", "Yorkshire", "Golden Retriever", "Bulldog", "Outra"])
+        elif esp == "Gato":
+            rac = st.selectbox("Raça", ["SRD", "Siamês", "Persa", "Angorá", "Maine Coon", "Bengal", "Outra"])
+        else:
+            rac = st.text_input("Especifique a Raça")
 
+        if st.form_submit_button("💾 Salvar Pet"):
+            if n_pet:
+                novo_pet = {
+                    "PET": n_pet.upper(), 
+                    "ESPÉCIE": esp, 
+                    "RAÇA": rac, 
+                    "NASCIMENTO": aniv.strftime('%d/%m/%Y')
+                }
+                st.session_state['pets'].append(novo_pet)
+                st.success(f"{n_pet} cadastrado com sucesso!")
+                st.rerun()
+
+    if st.session_state['pets']:
+        st.write("📋 **Lista de Pacientes**")
+        st.table(pd.DataFrame(st.session_state['pets']))
 # 5. MÓDULO 6: BACKUP (DRIVE EXTERNO)
 elif menu == "💾 Backup":
     st.subheader("💾 Exportar para Drive Externo")
