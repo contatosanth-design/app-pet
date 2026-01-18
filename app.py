@@ -16,23 +16,59 @@ with st.sidebar:
     st.title("🐾 Ribeira Vet Pro")
     menu = st.radio("NAVEGAÇÃO", ["👤 Tutores", "🐾 Pets", "📋 Prontuário", "💰 Financeiro", "💾 Backup"])
 
-# No Módulo 1 (Tutores), vamos adicionar uma busca rápida que já valida o que existe
+# 3. MÓDULO 1: TUTORES (CADASTRO NOVO + BUSCA)
 if menu == "👤 Tutores":
     st.subheader("👤 Gestão de Clientes")
     
-    # Se já existem clientes, permite selecionar um para ver detalhes ou editar
-    if st.session_state['clientes']:
-        nomes_tutores = [c['NOME'] for c in st.session_state['clientes']]
-        escolha = st.selectbox("⚡ Selecionar Tutor já cadastrado:", ["--- Novo Cadastro ---"] + nomes_tutores)
-        
-        if escolha != "--- Novo Cadastro ---":
-            tutor_dados = next(c for c in st.session_state['clientes'] if c['NOME'] == escolha)
-            st.info(f"✅ **Tutor Selecionado:** {tutor_dados['NOME']} | CPF: {tutor_dados['CPF']}")
-            if st.button("📋 Iniciar Atendimento deste Tutor"):
-                st.session_state['tutor_clicado'] = tutor_dados['NOME']
-                st.success("Tutor enviado para o Prontuário!")
-                # Aqui o sistema já prepara o salto para a aba de prontuário
+    # 1. Escolha: Buscar um existente ou criar um Novo
+    nomes_tutores = [c['NOME'] for c in st.session_state['clientes']]
+    escolha = st.selectbox("⚡ Selecionar Tutor ou Criar Novo:", ["--- Novo Cadastro ---"] + nomes_tutores)
+    
+    # 2. Lógica do Formulário
+    with st.form("f_tutor_integrado", clear_on_submit=True):
+        if escolha == "--- Novo Cadastro ---":
+            st.write("📝 **Preencha os dados do Novo Cliente:**")
+            v_nome = ""
+            v_tel = ""
+            v_cpf = ""
+            v_email = ""
+            v_end = ""
+        else:
+            # Puxa os dados do que já existe para o senhor ver/confirmar
+            dados = next(c for c in st.session_state['clientes'] if c['NOME'] == escolha)
+            st.info(f"👁️ Visualizando: {escolha}")
+            v_nome = dados['NOME']
+            v_tel = dados['TEL']
+            v_cpf = dados['CPF']
+            v_email = dados['E-MAIL']
+            v_end = dados['ENDEREÇO']
 
+        c1, c2 = st.columns([3, 1])
+        nome = c1.text_input("Nome Completo *", value=v_nome).upper()
+        zap = c2.text_input("Telefone/WhatsApp", value=v_tel)
+        
+        c3, c4 = st.columns([1, 1])
+        cpf = c3.text_input("CPF", value=v_cpf)
+        email = c4.text_input("E-mail", value=v_email)
+        
+        end = st.text_input("Endereço Completo", value=v_end)
+        
+        # Botão só faz o save se for cadastro novo
+        if st.form_submit_button("💾 Salvar Novo Cadastro"):
+            if escolha == "--- Novo Cadastro ---" and nome:
+                st.session_state['clientes'].append({
+                    "NOME": nome, "CPF": cpf, "TEL": zap, "ENDEREÇO": end, "E-MAIL": email
+                })
+                st.success(f"Tutor {nome} cadastrado com sucesso!")
+                st.rerun()
+            else:
+                st.warning("Para editar um cadastro existente ou atender, use o menu de Prontuário.")
+
+    # Tabela com o que já existe para conferência rápida
+    if st.session_state['clientes']:
+        st.write("---")
+        st.write("📋 **Banco de Dados Atual:**")
+        st.table(pd.DataFrame(st.session_state['clientes']))
 # 4. MÓDULO 2: PETS (VÍNCULO COM TUTOR)
 elif menu == "🐾 Pets":
     st.subheader("🐾 Cadastro de Pacientes")
