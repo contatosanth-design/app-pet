@@ -90,6 +90,40 @@ elif menu == "🐾 Pets":
 
     if st.session_state['pets']:
         st.table(pd.DataFrame(st.session_state['pets']))
+        # 5. MÓDULO 3: PRONTUÁRIO CLÍNICO (COM PESO E TEMPERATURA)
+elif menu == "📋 Prontuário":
+    st.subheader("📋 Atendimento Clínico")
+    
+    with st.form("f_prontuario", clear_on_submit=True):
+        c1, c2, c3 = st.columns([2, 1, 1])
+        pet_nome = c1.text_input("Paciente (Nome do Pet)")
+        peso = c2.text_input("Peso (kg)")
+        temp = c3.text_input("Temp (°C)")
+        
+        st.write("---")
+        st.write("🎙️ **Anamnese e Exame Clínico** (Pressione **Win + H** para ditar)")
+        anamnese = st.text_area("Relato do Tutor e Achados do Exame:", height=250)
+        
+        if st.form_submit_button("💾 Salvar Prontuário"):
+            if pet_nome and anamnese:
+                registro = {
+                    "DATA": datetime.now().strftime('%d/%m/%Y %H:%M'),
+                    "PET": pet_nome.upper(),
+                    "PESO": peso,
+                    "TEMP": temp,
+                    "RELATO": anamnese
+                }
+                # Inicializa lista de prontuários se não existir
+                if 'historico' not in st.session_state: st.session_state['historico'] = []
+                st.session_state['historico'].append(registro)
+                st.success(f"Prontuário de {pet_nome} salvo com sucesso!")
+                st.rerun()
+
+    # Exibe o histórico de atendimentos logo abaixo
+    if 'historico' in st.session_state and st.session_state['historico']:
+        st.write("---")
+        st.write("📂 **Histórico Recente**")
+        st.table(pd.DataFrame(st.session_state['historico']))
 # 5. MÓDULO 6: BACKUP (DRIVE EXTERNO)
 elif menu == "💾 Backup":
     st.subheader("💾 Exportar para Drive Externo")
