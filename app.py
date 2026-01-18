@@ -124,6 +124,48 @@ elif menu == "📋 Prontuário":
         st.write("---")
         st.write("📂 **Histórico Recente**")
         st.table(pd.DataFrame(st.session_state['historico']))
+        # 5. MÓDULO 3: PRONTUÁRIO CLÍNICO (COM BUSCA AUTOMÁTICA)
+elif menu == "📋 Prontuário":
+    st.subheader("📋 Atendimento Clínico")
+    
+    # Criamos uma lista com Nome do Pet + Nome do Tutor para o senhor selecionar
+    lista_pacientes = ["--- Selecione ou Digite ---"]
+    if st.session_state['pets']:
+        # Se o senhor tiver pets cadastrados, eles aparecem aqui automaticamente
+        lista_pacientes.extend([f"{p['PET']} (Raça: {p['RAÇA']})" for p in st.session_state['pets']])
+
+    with st.form("f_prontuario_v22", clear_on_submit=False):
+        c1, c2, c3 = st.columns([2, 1, 1])
+        
+        # Agora é um seletor com busca, não apenas um campo vazio
+        pet_selecionado = c1.selectbox("Paciente *", lista_pacientes)
+        
+        peso = c2.text_input("Peso (kg)")
+        temp = c3.text_input("Temp (°C)")
+        
+        st.write("---")
+        st.write("🎙️ **Anamnese e Exame Clínico** (Win + H para ditar)")
+        anamnese = st.text_area("Relato do Tutor e Achados do Exame:", height=250)
+        
+        if st.form_submit_button("💾 Salvar e Lançar Consulta"):
+            if pet_selecionado != "--- Selecione ou Digite ---" and anamnese:
+                # Salva o registro vinculado ao pet escolhido
+                registro = {
+                    "DATA": datetime.now().strftime('%d/%m/%Y %H:%M'),
+                    "PET": pet_selecionado,
+                    "PESO": peso,
+                    "TEMP": temp,
+                    "RELATO": anamnese
+                }
+                if 'historico' not in st.session_state: st.session_state['historico'] = []
+                st.session_state['historico'].append(registro)
+                
+                # Lança a consulta no financeiro automaticamente
+                consulta = {"Item": "CONSULTA CLÍNICA", "Preco": 150.0}
+                st.session_state['carrinho'].append(consulta)
+                
+                st.success(f"Atendimento de {pet_selecionado} salvo e lançado no caixa!")
+                st.rerun()
 # 5. MÓDULO 6: BACKUP (DRIVE EXTERNO)
 elif menu == "💾 Backup":
     st.subheader("💾 Exportar para Drive Externo")
