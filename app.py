@@ -23,41 +23,142 @@ with st.sidebar:
 
 # --- MÓDULOS ---
 
-# MÓDULO 1: GESTÃO DE TUTORES (Carregamento Automático)
-if menu == "👤 Tutores":
-    st.subheader("👤 Cadastro de Clientes")
-    nomes_cadastrados = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
-    busca = st.selectbox("🔍 Selecionar ou Buscar:", ["--- Novo Cadastro ---"] + nomes_cadastrados)
+import streamlit as st
+import pandas as pd
+from datetime import datetime, timedelta
 
-    # Lógica de preenchimento inteligente
-    v_nome, v_tel, v_cpf, v_end = ("", "", "", "")
-    if busca != "--- Novo Cadastro ---":
-        dados = next(c for c in st.session_state['clientes'] if c['NOME'] == busca)
-        v_nome, v_tel, v_cpf, v_end = dados['NOME'], dados['TEL'], dados['CPF'], dados.get('END', "")
+# 1. PARAMETROS DE MEMÓRIA E PERSISTÊNCIA
+st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
+
+for k in ['clientes', 'pets', 'historico', 'financeiro']:
+    if k not in st.session_state: st.session_state[k] = []
+
+# Variáveis de Controle de Fluxo (Evita a "Tela Branca")
+if 'sessao' not in st.session_state: 
+    st.session_state['sessao'] = {"aba": "👤 Tutores", "tutor": None, "pet": None}
+
+# 2. NAVEGAÇÃO INTEGRADA (Menu Lateral)
+with st.sidebar:
+    st.title("🐾 Ribeira Vet Pro")
+    opcoes_menu = ["👤 Tutores", "🐾 Pets", "📋 Prontuário", "💰 Financeiro", "💾 Backup"]
+    idx_menu = opcoes_menu.index(st.session_state['sessao']['aba'])
+    menu = st.radio("NAVEGAÇÃO", opcoes_menu, index=idx_menu)
+    st.session_state['sessao']['aba'] = menu
+
+# --- MÓDULOS REVISADOS ---
+
+# MÓDULO 1: TUTORES (Com E-mail e Atalho Direto)
+if menu == "👤 Tutores":
+    st.subheader("👤 Gestão de Clientes")
+    nomes_db = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
+    selecao = st.selectbox("🔍 Buscar Tutor:", ["--- Novo Cadastro ---"] + nomes_db)
+
+    v_nome, v_tel, v_email, v_cpf, v_end = ("", "", "", "", "")
+    
+    if selecao != "--- Novo Cadastro ---":
+        c = next(i for i in st.session_state['clientes'] if i['NOME'] == selecao)
+        v_nome, v_tel, v_email, v_cpf, v_end = c['NOME'], c['TEL'], c.get('EMAIL', ""), c['CPF'], c.get('END', "")
         
-        # ATALHO DE FLUXO: Encontrou? Já oferece o próximo passo.
-        st.success(f"✅ Cadastro localizado. Deseja prosseguir?")
-        if st.button(f"➡️ Ir para Animais de {v_nome}"):
-            st.session_state['fluxo'].update({"pagina": "🐾 Pets", "tutor": v_nome})
+        st.success(f"✅ Cadastro de {selecao} pronto.")
+        if st.button(f"➡️ Ver Pets de {selecao}"):
+            st.session_state['sessao'].update({"aba": "🐾 Pets", "tutor": selecao})
             st.rerun()
 
-    with st.form("form_tutor"):
-        c1, c2 = st.columns([3, 1])
+    with st.form("f_tutor_final"):
+        c1, c2 = st.columns([2, 2])
         f_nome = c1.text_input("Nome Completo *", value=v_nome).upper()
         f_tel = c2.text_input("WhatsApp", value=v_tel)
-        f_cpf = st.text_input("CPF", value=v_cpf)
-        f_end = st.text_input("Endereço", value=v_end)
+        # O CAMPO CRÍTICO: E-mail obrigatório para o fluxo
+        f_email = st.text_input("E-mail para Recibos/Vacinas *", value=v_email).lower()
+        c3, c4 = st.columns(2)
+        f_cpf = c3.text_input("CPF/CNPJ", value=v_cpf)
+        f_end = c4.text_input("Endereço", value=v_end)
         
-        if st.form_submit_button("💾 Salvar/Atualizar Dados"):
-            if f_nome:
-                # Se for novo, adiciona; se existir, atualiza.
-                if busca == "--- Novo Cadastro ---":
-                    st.session_state['clientes'].append({"NOME": f_nome, "TEL": f_tel, "CPF": f_cpf, "END": f_end})
+        if st.form_submit_button("💾 Salvar/Atualizar Cadastro"):
+            if f_nome and f_email:
+                novo_dado = {"NOME": f_nome, "TEL": f_tel, "EMAIL": f_email, "CPF": f_cpf, "END": f_end}
+                if selecao == "--- Novo Cadastro ---":
+                    st.session_state['clientes'].append(novo_dado)
                 else:
-                    for c in st.session_state['clientes']:
-                        if c['NOME'] == busca: c.update({"NOME": f_nome, "TEL": f_tel, "CPF": f_cpf, "END": f_end})
+                    for i, cli in enumerate(st.session_state['clientes']):
+                        if cli['NOME'] == selecao: st.session_state['clientes'][i] = novo_dado
                 st.rerun()
+            else:
+                st.error("Nome e E-mail são campos obrigatórios.")
 
+# MÓDULO 2: PETS (Fixação da Raça e Espécie)
+elif menu == "🐾 Pets":
+    st.subheader("🐾 Central do Paciente")
+    lista_t = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
+    
+    idx_t = 0
+    if st.session_state['sessao']['tutor'] in lista_t:
+        idx_t = lista_t.index(st.session_state['sessao']['tutor']) + 1
+
+    t_foco = st.selectbox("Selecione o Tutor:", ["--- Escolha ---"] + lista_t, index=idx_t)
+
+    if t_foco != "--- Escolha ---":
+        pets_t = [p for p in st.session_state['pets'] if p['TUTOR'] == t_foco]
+        if pets_t:
+            for p in pets_t:
+                col_p, col_b = st.columns([4, 1])
+                col_p.info(f"🐶 **{p['PET']}** ({p['ESP']} - {p['RAÇA']})")
+                if col_b.button(f"🩺 Atender", key=f"btn_{p['PET']}"):
+                    st.session_state['sessao'].update({"aba": "📋 Prontuário", "pet": f"{p['PET']} (Tutor: {t_foco})"})
+                    st.rerun()
+        
+        with st.expander("➕ Novo Animal"):
+            with st.form("f_pet_final"):
+                c1, c2 = st.columns(2)
+                np = c1.text_input("Nome do Animal *").upper()
+                ep = c2.selectbox("Espécie", ["Cão", "Gato", "Outro"])
+                # Raça corrigida para não desaparecer
+                rp = st.text_input("Raça (Ex: Bulldog, SRD) *").upper()
+                if st.form_submit_button("💾 Salvar Animal"):
+                    if np and rp:
+                        st.session_state['pets'].append({"PET": np, "ESP": ep, "RAÇA": rp, "TUTOR": t_foco})
+                        st.rerun()
+
+# MÓDULO 3: PRONTUÁRIO (Anamnese + Histórico + Lembretes)
+elif menu == "📋 Prontuário":
+    st.subheader("📋 Atendimento Clínico")
+    p_lista = sorted([f"{p['PET']} (Tutor: {p['TUTOR']})" for p in st.session_state['pets']])
+    
+    idx_p = 0
+    if st.session_state['sessao']['pet'] in p_lista:
+        idx_p = p_lista.index(st.session_state['sessao']['pet']) + 1
+
+    paciente = st.selectbox("Paciente em Atendimento:", ["--- Selecione ---"] + p_lista, index=idx_p)
+
+    if paciente != "--- Selecione ---":
+        col_at, col_hi = st.columns([2, 1])
+        
+        with col_at:
+            with st.form("f_atendimento_final"):
+                st.markdown("### 📝 Evolução Atual")
+                c1, c2 = st.columns(2)
+                peso = c1.text_input("Peso (kg)")
+                temp = c2.text_input("Temperatura (°C)")
+                relato = st.text_area("Relato da Consulta / Prescrição:", height=250)
+                aviso = st.date_input("Próximo Lembrete (Vacina/Retorno)", value=datetime.now() + timedelta(days=21))
+                
+                if st.form_submit_button("💾 Salvar e Finalizar"):
+                    st.session_state['historico'].append({
+                        "DATA": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "PACIENTE": paciente, "PESO": peso, "TEMP": temp, 
+                        "RELATO": relato, "RETORNO": aviso.strftime("%d/%m/%Y")
+                    })
+                    st.session_state['sessao']['pet'] = None
+                    st.success("Prontuário salvo!")
+                    st.rerun()
+
+        with col_hist:
+            st.markdown("### 📜 Histórico Lado a Lado")
+            h_pet = [h for h in st.session_state['historico'] if h['PACIENTE'] == paciente]
+            for h in reversed(h_pet):
+                with st.expander(f"📅 {h['DATA']} - {h['PESO']}kg"):
+                    st.write(h['RELATO'])
+                    st.info(f"🔔 Retorno em: {h['RETORNO']}")
 # MÓDULO 2: GESTÃO DE PETS (Raças e Histórico Rápido)
 elif menu == "🐾 Pets":
     st.subheader("🐾 Central do Paciente")
