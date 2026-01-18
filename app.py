@@ -50,14 +50,13 @@ if menu == "👤 Tutores":
         st.write("📋 **Lista Geral**")
         st.table(pd.DataFrame(st.session_state['clientes']))
 
-# 4. MÓDULO 2: PETS (CORREÇÃO DE RAÇAS E ANIVERSÁRIO)
+# 4. MÓDULO 2: PETS (DATA DIGITÁVEL E RAÇAS DINÂMICAS)
 elif menu == "🐾 Pets":
     st.subheader("🐾 Cadastro de Pacientes")
     
-    # 1. Escolha da Espécie (Fora do form para atualizar as raças na hora)
+    # Seleção de Espécie (Fora do form para atualizar as raças na hora)
     esp = st.selectbox("Selecione a Espécie", ["Cão", "Gato", "Outro"])
     
-    # 2. Definição automática das listas baseada na espécie
     if esp == "Cão":
         lista_racas = ["SRD", "Poodle", "Pinscher", "Shih Tzu", "Yorkshire", "Golden Retriever", "Bulldog", "Outra..."]
     elif esp == "Gato":
@@ -65,36 +64,30 @@ elif menu == "🐾 Pets":
     else:
         lista_racas = ["Outra..."]
 
-    # 3. Formulário de Cadastro
-    with st.form("f_pet_v19", clear_on_submit=True):
+    with st.form("f_pet_v20", clear_on_submit=True):
         c1, c2 = st.columns([2, 1])
         n_pet = c1.text_input("Nome do Pet *")
         
-        # Campo de Aniversário para arquivo e contato futuro
-        data_nasc = c2.date_input("Data de Nascimento", value=datetime.now())
+        # DATA DIGITÁVEL NO PADRÃO BRASIL (Sem calendário)
+        data_nasc = c2.text_input("Nascimento (DD/MM/AAAA)", value=datetime.now().strftime('%d/%m/%Y'))
         
-        # Seletor de Raça dinâmico
         rac_sel = st.selectbox("Raça", lista_racas)
-        
-        # Campo extra que só aparece se escolher "Outra..."
-        rac_nova = st.text_input("Se escolheu 'Outra', digite a raça aqui:")
+        rac_nova = st.text_input("Se escolheu 'Outra', digite aqui:")
 
         if st.form_submit_button("💾 Salvar Pet"):
             if n_pet:
-                # Lógica para salvar a raça correta
                 r_final = rac_nova.upper() if rac_sel == "Outra..." else rac_sel
                 
                 novo_pet = {
                     "PET": n_pet.upper(), 
                     "ESPÉCIE": esp, 
                     "RAÇA": r_final, 
-                    "NASCIMENTO": data_nasc.strftime('%d/%m/%Y')
+                    "NASCIMENTO": data_nasc # Salva exatamente o que o senhor digitou
                 }
                 st.session_state['pets'].append(novo_pet)
-                st.success(f"Paciente {n_pet} cadastrado!")
+                st.success(f"Paciente {n_pet} registrado com sucesso!")
                 st.rerun()
 
-    # Mostra a tabela atualizada com as novas colunas
     if st.session_state['pets']:
         st.table(pd.DataFrame(st.session_state['pets']))
 # 5. MÓDULO 6: BACKUP (DRIVE EXTERNO)
