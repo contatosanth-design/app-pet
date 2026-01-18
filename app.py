@@ -2,104 +2,93 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# 1. CONFIGURAÇÃO INICIAL
+# 1. CONFIGURAÇÃO E MEMÓRIA
 st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
 
 for k in ['clientes', 'pets', 'carrinho', 'historico']:
     if k not in st.session_state: st.session_state[k] = []
 
 if 'estoque' not in st.session_state:
-    st.session_state['estoque'] = [
-        {"Item": "CONSULTA CLÍNICA", "Preco": 150.0},
-        {"Item": "VACINA V10", "Preco": 120.0}
-    ]
+    st.session_state['estoque'] = [{"Item": "CONSULTA CLÍNICA", "Preco": 150.0}]
 
-# 2. MENU LATERAL
+# 2. MENU
 with st.sidebar:
     st.title("🐾 Ribeira Vet Pro")
     menu = st.radio("NAVEGAÇÃO", ["👤 Tutores", "🐾 Pets", "📋 Prontuário", "💰 Financeiro", "💾 Backup"])
 
-# 3. MÓDULO 1: TUTORES
+# 3. MÓDULO 1: TUTORES (Cadastro do Responsável)
 if menu == "👤 Tutores":
     st.subheader("👤 Cadastro de Clientes")
     with st.form("f_tutor"):
-        c1, c2 = st.columns([3, 1])
-        nome = c1.text_input("Nome Completo *")
-        zap = c2.text_input("Telefone")
-        c3, c4 = st.columns([1, 1])
-        cpf = c3.text_input("CPF")
-        email = c4.text_input("E-mail")
-        end = st.text_input("Endereço Completo")
-        if st.form_submit_button("💾 Salvar"):
+        nome = st.text_input("Nome do Tutor *").upper()
+        zap = st.text_input("WhatsApp")
+        if st.form_submit_button("💾 Salvar Tutor"):
             if nome:
-                st.session_state['clientes'].append({"NOME": nome.upper(), "CPF": cpf, "TEL": zap, "ENDEREÇO": end, "E-MAIL": email})
+                st.session_state['clientes'].append({"NOME": nome, "TEL": zap})
                 st.rerun()
     if st.session_state['clientes']: st.table(pd.DataFrame(st.session_state['clientes']))
 
-# 4. MÓDULO 2: PETS (COM VÍNCULO)
+# 4. MÓDULO 2: PETS (VÍNCULO DIRETO COM TUTOR)
 elif menu == "🐾 Pets":
     st.subheader("🐾 Cadastro de Pacientes")
-    lista_tutores = ["--- Selecione o Tutor ---"]
-    if st.session_state['clientes']:
-        lista_tutores.extend([c['NOME'] for c in st.session_state['clientes']])
-
-    with st.form("f_pet"):
-        tutor_vinculo = st.selectbox("Tutor (Dono) *", lista_tutores)
-        c1, c2 = st.columns([2, 1])
-        n_pet = c1.text_input("Nome do Pet *")
-        data_nasc = c2.text_input("Nascimento (DD/MM/AAAA)", value=datetime.now().strftime('%d/%m/%Y'))
-        esp = st.selectbox("Espécie", ["Cão", "Gato", "Outro"])
-        rac = st.text_input("Raça")
-        if st.form_submit_button("💾 Salvar Pet"):
-            if n_pet and tutor_vinculo != "--- Selecione o Tutor ---":
-                st.session_state['pets'].append({
-                    "PET": n_pet.upper(), "TUTOR": tutor_vinculo, 
-                    "ESPÉCIE": esp, "RAÇA": rac.upper(), "NASCIMENTO": data_nasc
-                })
-                st.rerun()
+    # Puxa a lista de tutores já cadastrados
+    tutores_disp = [c['NOME'] for c in st.session_state['clientes']] if st.session_state['clientes'] else []
+    
+    if not tutores_disp:
+        st.warning("⚠️ Cadastre um Tutor primeiro no menu ao lado!")
+    else:
+        with st.form("f_pet"):
+            tutor_sel = st.selectbox("Quem é o Dono/Tutor? *", tutores_disp)
+            n_pet = st.text_input("Nome do Pet *").upper()
+            esp = st.selectbox("Espécie", ["Cão", "Gato", "Outro"])
+            rac = st.text_input("Raça")
+            nasc = st.text_input("Nascimento (DD/MM/AAAA)", value=datetime.now().strftime('%d/%m/%Y'))
+            
+            if st.form_submit_button("💾 Vincular Pet ao Tutor"):
+                if n_pet:
+                    st.session_state['pets'].append({
+                        "PET": n_pet, "TUTOR": tutor_sel, 
+                        "ESP": esp, "RAÇA": rac.upper(), "NASC": nasc
+                    })
+                    st.success(f"{n_pet} agora é dependente de {tutor_sel}!")
+                    st.rerun()
     if st.session_state['pets']: st.table(pd.DataFrame(st.session_state['pets']))
 
-# 5. MÓDULO 3: PRONTUÁRIO (BUSCA AUTOMÁTICA BLINDADA)
+# 5. MÓDULO 3: PRONTUÁRIO (BUSCA INTELIGENTE)
 elif menu == "📋 Prontuário":
     st.subheader("📋 Atendimento Clínico")
-    
-    # Lógica que evita o erro 'KeyError: TUTOR'
-    opcoes_busca = ["--- Escolha o Paciente ---"]
+    # Cria a lista de busca unindo Pet + Tutor automaticamente
+    opcoes = ["--- Selecione ---"]
     for p in st.session_state['pets']:
-        tutor_nome = p.get('TUTOR', 'Não Informado') # Se não achar o tutor, coloca 'Não Informado'
-        opcoes_busca.append(f"{p['PET']} (Tutor: {tutor_nome})")
+        opcoes.append(f"{p['PET']} (Tutor: {p.get('TUTOR', 'N/D')})")
 
-    with st.form("f_pronto"):
-        pet_selecionado = st.selectbox("Buscar Paciente *", opcoes_busca)
+    with st.form("f_atendimento"):
+        pet_completo = st.selectbox("Buscar Paciente *", opcoes)
         c1, c2 = st.columns(2)
         peso = c1.text_input("Peso (kg)")
-        temp = c2.text_input("Temp (°C)")
-        anamnese = st.text_area("🎙️ Anamnese (Win + H):", height=200)
+        temp = c2.text_input("Temperatura (°C)")
+        anamnese = st.text_area("🎙️ Anamnese e Exame (Win+H):", height=200)
         
         if st.form_submit_button("💾 Salvar Atendimento"):
-            if pet_selecionado != "--- Escolha o Paciente ---" and anamnese:
+            if pet_completo != "--- Selecione ---" and anamnese:
                 st.session_state['historico'].append({
                     "DATA": datetime.now().strftime('%d/%m/%Y %H:%M'),
-                    "PACIENTE": pet_selecionado, "PESO": peso, "TEMP": temp, "RELATO": anamnese
+                    "PACIENTE": pet_completo, "PESO": peso, "TEMP": temp, "RELATO": anamnese
                 })
-                st.session_state['carrinho'].append({"Item": f"CONSULTA: {pet_selecionado}", "Preco": 150.0})
-                st.success("Salvo e lançado no financeiro!")
+                # Lança direto no financeiro com o nome do pet e tutor
+                st.session_state['carrinho'].append({"Item": f"CONSULTA: {pet_completo}", "Preco": 150.0})
+                st.success("Tudo salvo! O valor da consulta já está no financeiro.")
                 st.rerun()
     if st.session_state['historico']: st.table(pd.DataFrame(st.session_state['historico']))
 
-# 6. MÓDULO 4: FINANCEIRO
+# 6. MÓDULOS 4 E 5 (FINANCEIRO E BACKUP)
 elif menu == "💰 Financeiro":
     st.subheader("💰 Caixa")
     if st.session_state['carrinho']:
         st.table(pd.DataFrame(st.session_state['carrinho']))
-        if st.button("🏁 Fechar Caixa"):
-            st.session_state['carrinho'] = []
-            st.rerun()
-
-# 7. MÓDULO 5: BACKUP
+        if st.button("🏁 Fechar"): st.session_state['carrinho'] = []; st.rerun()
 elif menu == "💾 Backup":
     st.subheader("💾 Backup")
-    if st.session_state['clientes']:
-        st.download_button("📥 Clientes", pd.DataFrame(st.session_state['clientes']).to_csv(index=False).encode('utf-8-sig'), "clientes.csv")
     if st.session_state['pets']:
-        st.download_button("📥 Pets", pd.DataFrame(st.session_state['pets']).to_csv(index=False).encode('utf-8-sig'), "pets.csv")
+        st.download_button("📥 Baixar Planilha de Pacientes", pd.DataFrame(st.session_state['pets']).to_csv(index=False).encode('utf-8-sig'), "pets.csv")
+        
