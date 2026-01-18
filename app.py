@@ -50,39 +50,52 @@ if menu == "👤 Tutores":
         st.write("📋 **Lista Geral**")
         st.table(pd.DataFrame(st.session_state['clientes']))
 
-# 4. MÓDULO 2: PETS (ATUALIZADO COM RAÇAS E ANIVERSÁRIO)
+# 4. MÓDULO 2: PETS (CORREÇÃO DE RAÇAS E ANIVERSÁRIO)
 elif menu == "🐾 Pets":
     st.subheader("🐾 Cadastro de Pacientes")
     
-    with st.form("f_pet_v17"):
+    # 1. Escolha da Espécie (Fora do form para atualizar as raças na hora)
+    esp = st.selectbox("Selecione a Espécie", ["Cão", "Gato", "Outro"])
+    
+    # 2. Definição automática das listas baseada na espécie
+    if esp == "Cão":
+        lista_racas = ["SRD", "Poodle", "Pinscher", "Shih Tzu", "Yorkshire", "Golden Retriever", "Bulldog", "Outra..."]
+    elif esp == "Gato":
+        lista_racas = ["SRD", "Siamês", "Persa", "Angorá", "Maine Coon", "Bengal", "Outra..."]
+    else:
+        lista_racas = ["Outra..."]
+
+    # 3. Formulário de Cadastro
+    with st.form("f_pet_v19", clear_on_submit=True):
         c1, c2 = st.columns([2, 1])
         n_pet = c1.text_input("Nome do Pet *")
-        aniv = c2.date_input("Data de Nascimento", value=datetime.now()) # Campo para parabenização
         
-        esp = st.selectbox("Espécie", ["Cão", "Gato", "Outro"])
+        # Campo de Aniversário para arquivo e contato futuro
+        data_nasc = c2.date_input("Data de Nascimento", value=datetime.now())
         
-        # Seleção de Raças Comuns
-        if esp == "Cão":
-            rac = st.selectbox("Raça", ["SRD", "Poodle", "Pinscher", "Shih Tzu", "Yorkshire", "Golden Retriever", "Bulldog", "Outra"])
-        elif esp == "Gato":
-            rac = st.selectbox("Raça", ["SRD", "Siamês", "Persa", "Angorá", "Maine Coon", "Bengal", "Outra"])
-        else:
-            rac = st.text_input("Especifique a Raça")
+        # Seletor de Raça dinâmico
+        rac_sel = st.selectbox("Raça", lista_racas)
+        
+        # Campo extra que só aparece se escolher "Outra..."
+        rac_nova = st.text_input("Se escolheu 'Outra', digite a raça aqui:")
 
         if st.form_submit_button("💾 Salvar Pet"):
             if n_pet:
+                # Lógica para salvar a raça correta
+                r_final = rac_nova.upper() if rac_sel == "Outra..." else rac_sel
+                
                 novo_pet = {
                     "PET": n_pet.upper(), 
                     "ESPÉCIE": esp, 
-                    "RAÇA": rac, 
-                    "NASCIMENTO": aniv.strftime('%d/%m/%Y')
+                    "RAÇA": r_final, 
+                    "NASCIMENTO": data_nasc.strftime('%d/%m/%Y')
                 }
                 st.session_state['pets'].append(novo_pet)
-                st.success(f"{n_pet} cadastrado com sucesso!")
+                st.success(f"Paciente {n_pet} cadastrado!")
                 st.rerun()
 
+    # Mostra a tabela atualizada com as novas colunas
     if st.session_state['pets']:
-        st.write("📋 **Lista de Pacientes**")
         st.table(pd.DataFrame(st.session_state['pets']))
 # 5. MÓDULO 6: BACKUP (DRIVE EXTERNO)
 elif menu == "💾 Backup":
