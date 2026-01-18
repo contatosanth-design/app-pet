@@ -2,123 +2,107 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 
-# 1. NÚCLEO DE DADOS E CONFIGURAÇÃO
+# --- CONFIGURAÇÃO E PERSISTÊNCIA ---
 st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
 
-# Inicialização de listas fundamentais
-for k in ['clientes', 'pets', 'historico', 'financeiro']:
+# Inicialização de dados (Banco de Dados em Memória)
+for k in ['clientes', 'pets', 'historico']:
     if k not in st.session_state: st.session_state[k] = []
 
-# Controle de Fluxo para evitar erros de navegação
 if 'fluxo' not in st.session_state:
     st.session_state['fluxo'] = {"aba": "👤 Tutores", "tutor": None, "pet": None}
 
-# 2. MENU LATERAL SINCRONIZADO
+# --- NAVEGAÇÃO ---
 with st.sidebar:
     st.title("🐾 Ribeira Vet Pro")
-    opcoes = ["👤 Tutores", "🐾 Pets", "📋 Prontuário", "💰 Financeiro", "💾 Backup"]
-    # Garante que o rádio acompanhe a aba ativa no fluxo
+    opcoes = ["👤 Tutores", "🐾 Pets", "📋 Prontuário", "💰 Financeiro"]
     aba_idx = opcoes.index(st.session_state['fluxo']['aba'])
-    menu = st.radio("NAVEGAÇÃO", opcoes, index=aba_idx, key="nav_vet")
+    menu = st.radio("MENU PRINCIPAL", opcoes, index=aba_idx, key="nav_vet_final")
     st.session_state['fluxo']['aba'] = menu
 
-# --- MÓDULOS INTEGRADOS ---
-
-# MÓDULO 1: TUTORES (Campo E-mail obrigatório para envios)
+# --- MÓDULO 1: TUTORES (FOCO EM E-MAIL E CONTATO) ---
 if menu == "👤 Tutores":
-    st.subheader("👤 Gestão de Clientes")
-    nomes_db = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
-    selecao = st.selectbox("⚡ Selecionar Tutor:", ["--- Novo Cadastro ---"] + nomes_db)
+    st.subheader("👤 Cadastro de Clientes (Tutores)")
+    nomes_cadastrados = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
+    tutor_selecionado = st.selectbox("🔍 Buscar ou Criar:", ["--- Novo Cadastro ---"] + nomes_cadastrados)
 
-    # Preenchimento automático de campos existentes
-    v_nome, v_tel, v_email, v_cpf, v_end = ("", "", "", "", "")
-    if selecao != "--- Novo Cadastro ---":
-        c = next(i for i in st.session_state['clientes'] if i['NOME'] == selecao)
-        v_nome, v_tel, v_email, v_cpf, v_end = c['NOME'], c['TEL'], c.get('EMAIL', ""), c['CPF'], c.get('END', "")
+    # Lógica de preenchimento automático para edição
+    v_nome, v_tel, v_email = ("", "", "")
+    if tutor_selecionado != "--- Novo Cadastro ---":
+        dados = next(c for c in st.session_state['clientes'] if c['NOME'] == tutor_selecionado)
+        v_nome, v_tel, v_email = dados['NOME'], dados['TEL'], dados.get('EMAIL', "")
         
-        # Atalho direto para otimizar o atendimento
         if st.button(f"➡️ Ver Animais de {v_nome}"):
             st.session_state['fluxo'].update({"aba": "🐾 Pets", "tutor": v_nome})
             st.rerun()
 
-    with st.form("form_tutor_final"):
-        col1, col2 = st.columns([2, 1])
-        f_nome = col1.text_input("Nome Completo *", value=v_nome).upper()
-        f_tel = col2.text_input("WhatsApp", value=v_tel)
-        # Fixação do E-mail como parâmetro essencial
-        f_email = st.text_input("E-mail (Lembretes/Vacinas) *", value=v_email).lower()
-        f_cpf = st.text_input("CPF/CNPJ", value=v_cpf)
-        f_end = st.text_input("Endereço Completo", value=v_end)
-        
-        if st.form_submit_button("💾 Salvar/Atualizar Cadastro"):
+    with st.form("f_tutor"):
+        f_nome = st.text_input("Nome Completo *", value=v_nome).upper()
+        col1, col2 = st.columns(2)
+        f_tel = col1.text_input("WhatsApp", value=v_tel)
+        f_email = col2.text_input("E-mail (Obrigatório) *", value=v_email).lower() #
+        if st.form_submit_button("💾 Salvar Tutor"):
             if f_nome and f_email:
-                dados_cli = {"NOME": f_nome, "TEL": f_tel, "EMAIL": f_email, "CPF": f_cpf, "END": f_end}
-                if selecao == "--- Novo Cadastro ---":
-                    st.session_state['clientes'].append(dados_cli)
+                novo_dado = {"NOME": f_nome, "TEL": f_tel, "EMAIL": f_email}
+                if tutor_selecionado == "--- Novo Cadastro ---":
+                    st.session_state['clientes'].append(novo_dado)
                 else:
-                    for i, cli in enumerate(st.session_state['clientes']):
-                        if cli['NOME'] == selecao: st.session_state['clientes'][i] = dados_cli
+                    for i, c in enumerate(st.session_state['clientes']):
+                        if c['NOME'] == tutor_selecionado: st.session_state['clientes'][i] = novo_dado
                 st.rerun()
-            else:
-                st.error("Campos Nome e E-mail são obrigatórios.")
 
-# MÓDULO 2: PETS (Raça visível e persistente)
+# --- MÓDULO 2: PACIENTES E RAÇAS ---
 elif menu == "🐾 Pets":
-    st.subheader("🐾 Pacientes")
-    tuts = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
-    idx_t = (tuts.index(st.session_state['fluxo']['tutor']) + 1) if st.session_state['fluxo']['tutor'] in tuts else 0
-    tutor_foco = st.selectbox("Selecione o Tutor:", ["--- Escolha ---"] + tuts, index=idx_t)
+    st.subheader("🐾 Cadastro de Pacientes")
+    t_lista = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
+    idx_t = (t_lista.index(st.session_state['fluxo']['tutor']) + 1) if st.session_state['fluxo']['tutor'] in t_lista else 0
+    tutor_foco = st.selectbox("Tutor Responsável:", ["--- Selecione ---"] + t_lista, index=idx_t)
 
-    if tutor_foco != "--- Escolha ---":
-        # Listagem de pets com detalhamento de raça
-        pets_do_tutor = [p for p in st.session_state['pets'] if p['TUTOR'] == tutor_foco]
-        for p in pets_do_tutor:
-            cp, ca = st.columns([4, 1])
-            cp.info(f"🐶 **{p['PET']}** ({p['ESP']} - {p['RAÇA']})")
-            if ca.button(f"🩺 Atender", key=f"at_{p['PET']}"):
+    if tutor_foco != "--- Selecione ---":
+        # Exibe Pets já cadastrados com Raça visível
+        meus_pets = [p for p in st.session_state['pets'] if p['TUTOR'] == tutor_foco]
+        for p in meus_pets:
+            c1, c2 = st.columns([4, 1])
+            c1.warning(f"🐕 {p['PET']} | Espécie: {p['ESP']} | Raça: {p['RAÇA']}")
+            if c2.button(f"🩺 Atender", key=f"at_{p['PET']}"):
                 st.session_state['fluxo'].update({"aba": "📋 Prontuário", "pet": f"{p['PET']} (Tutor: {tutor_foco})"})
                 st.rerun()
-        
-        with st.expander("➕ Adicionar Novo Animal"):
-            with st.form("form_pet_final"):
-                c_p1, c_p2 = st.columns(2)
-                n_pet = c_p1.text_input("Nome do Animal *").upper()
-                e_pet = c_p2.selectbox("Espécie", ["Cão", "Gato", "Outro"])
-                # Raça protegida contra desaparecimento
-                r_pet = st.text_input("Raça (Ex: SRD, Poodle) *").upper()
-                n_pet_idade = st.text_input("Data de Nascimento / Idade")
+
+        with st.expander("➕ Cadastrar Novo Animal"):
+            with st.form("f_pet"):
+                n_p = st.text_input("Nome do Pet *").upper()
+                c1, c2 = st.columns(2)
+                e_p = c1.selectbox("Espécie", ["Cão", "Gato", "Outro"])
+                r_p = c2.text_input("Raça *").upper() #
                 if st.form_submit_button("💾 Salvar Pet"):
-                    if n_pet and r_pet:
-                        st.session_state['pets'].append({"PET": n_pet, "ESP": e_pet, "RAÇA": r_pet, "TUTOR": tutor_foco, "NASC": n_pet_idade})
+                    if n_p and r_p:
+                        st.session_state['pets'].append({"PET": n_p, "ESP": e_p, "RAÇA": r_p, "TUTOR": tutor_foco})
                         st.rerun()
 
-# MÓDULO 3: PRONTUÁRIO (Anamnese + Histórico Lateral)
+# --- MÓDULO 3: PRONTUÁRIO E HISTÓRICO DUAL ---
 elif menu == "📋 Prontuário":
-    st.subheader("📋 Atendimento Clínico")
+    st.subheader("📋 Atendimento")
     p_lista = sorted([f"{p['PET']} (Tutor: {p['TUTOR']})" for p in st.session_state['pets']])
     idx_p = (p_lista.index(st.session_state['fluxo']['pet']) + 1) if st.session_state['fluxo']['pet'] in p_lista else 0
-    paciente_foco = st.selectbox("Paciente:", ["--- Selecione ---"] + p_lista, index=idx_p)
+    paciente = st.selectbox("Paciente:", ["--- Selecione ---"] + p_lista, index=idx_p)
 
-    if paciente_foco != "--- Selecione ---":
-        col_registro, col_historico = st.columns([2, 1])
-        with col_registro:
-            with st.form("form_atend_final"):
-                st.markdown("### 📝 Evolução do Atendimento")
-                ca1, ca2 = st.columns(2)
-                peso, temp = ca1.text_input("Peso (kg)"), ca2.text_input("Temp (°C)")
-                anamnese = st.text_area("Descrição Clínica / Conduta / Vacinas:", height=300)
-                proximo = st.date_input("Previsão de Retorno / Vacinação", value=datetime.now() + timedelta(days=21))
-                if st.form_submit_button("💾 Salvar e Finalizar"):
+    if paciente != "--- Selecione ---":
+        col_reg, col_hist = st.columns([2, 1])
+        with col_reg:
+            with st.form("f_clinico"):
+                peso = st.text_input("Peso (kg)")
+                anamnese = st.text_area("Evolução Clínica / Vacinas:", height=250)
+                retorno = st.date_input("Lembrete de Retorno", value=datetime.now() + timedelta(days=15))
+                if st.form_submit_button("💾 Finalizar Consulta"):
                     st.session_state['historico'].append({
-                        "DATA": datetime.now().strftime("%d/%m/%Y %H:%M"), "PACIENTE": paciente_foco,
-                        "PESO": peso, "TEMP": temp, "RELATO": anamnese, "RETORNO": proximo.strftime("%d/%m/%Y")
+                        "DATA": datetime.now().strftime("%d/%m/%Y"), "PACIENTE": paciente,
+                        "RELATO": anamnese, "RETORNO": retorno.strftime("%d/%m/%Y")
                     })
-                    st.session_state['fluxo']['pet'] = None
                     st.rerun()
-        with col_historico:
-            st.markdown("### 📜 Histórico Passado")
-            h_filtrado = [h for h in st.session_state['historico'] if h['PACIENTE'] == paciente_foco]
-            for h in reversed(h_filtrado):
-                with st.expander(f"📅 {h['DATA']} (Peso: {h['PESO']}kg)"):
-                    st.write(f"**Relato:** {h['RELATO']}")
-                    st.info(f"🔔 Retorno agendado: {h['RETORNO']}")
+        with col_hist:
+            st.write("### 📜 Passado Médico")
+            h_p = [h for h in st.session_state['historico'] if h['PACIENTE'] == paciente]
+            for h in reversed(h_p):
+                with st.expander(f"📅 {h['DATA']}"):
+                    st.write(h['RELATO'])
+                    st.info(f"🔔 Retorno: {h['RETORNO']}")
