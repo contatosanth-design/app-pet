@@ -97,22 +97,52 @@ elif st.session_state.aba_atual == "📋 Prontuário":
                 st.session_state['historico'].append({"DATA": datetime.now().strftime("%d/%m/%Y %H:%M"), "PACIENTE": paciente, "PESO": f_peso, "TEMP": f_temp, "TEXTO": f_texto})
                 st.success("Consulta Salva!")
 
-# --- 6. MÓDULO FINANCEIRO (CORRIGIDO) ---
+# --- 6. MÓDULO FINANCEIRO COMPLETO (v9.3) ---
 elif st.session_state.aba_atual == "💰 Financeiro":
-    st.subheader("💰 Controle de Pagamentos")
+    st.subheader("💰 Controle de Pagamentos e Serviços")
+    
+    # Lista de pacientes para vincular a cobrança
     p_lista = sorted([f"{p['PET']} (Tutor: {p['TUTOR']})" for p in st.session_state['pets']])
     paciente_fin = st.selectbox("Vincular ao paciente:", ["--- Selecione ---"] + p_lista)
+    
     if paciente_fin != "--- Selecione ---":
-        with st.form("form_fin_v92"):
-            valor = st.number_input("Valor (R$):", min_value=0.0, step=10.0)
-            forma = st.selectbox("Forma:", ["Pix", "Cartão", "Dinheiro"])
-            if st.form_submit_button("💵 Registrar"):
-                st.session_state.caixa.append({"DATA": datetime.now().strftime("%d/%m/%Y"), "PACIENTE": paciente_fin, "VALOR": valor, "PAGTO": forma})
+        with st.form("form_fin_v93"):
+            col1, col2 = st.columns(2)
+            
+            # Tipos de serviços combinados
+            tipo_servico = col1.selectbox("Tipo de Serviço:", [
+                "Consulta Local", 
+                "Consulta Residencial", 
+                "Vacina", 
+                "Medicamento", 
+                "Outros"
+            ])
+            
+            valor = col1.number_input("Valor (R$):", min_value=0.0, step=5.0)
+            forma = col2.selectbox("Forma de Pagamento:", ["Pix", "Dinheiro", "Cartão Débito", "Cartão Crédito"])
+            detalhes = col2.text_input("Detalhes (Ex: Nome da Vacina/Remédio):")
+
+            if st.form_submit_button("💵 Registrar e Gerar Recibo"):
+                novo_lancamento = {
+                    "DATA": datetime.now().strftime("%d/%m/%Y"),
+                    "PACIENTE": paciente_fin,
+                    "SERVIÇO": tipo_servico,
+                    "DETALHES": detalhes,
+                    "VALOR": valor,
+                    "PAGTO": forma
+                }
+                st.session_state.caixa.append(novo_lancamento)
+                st.success(f"Lançamento de {tipo_servico} realizado com sucesso!")
                 st.rerun()
+
+    # Exibição do histórico de hoje
     if st.session_state.caixa:
+        st.write("### 📊 Movimentação do Dia")
         st.table(st.session_state.caixa)
-        total = sum(item['VALOR'] for item in st.session_state.caixa)
-        st.metric("Total do Dia", f"R$ {total:.2f}")
+        
+        # Soma total (Corrigindo o erro da linha 198)
+        total_dia = sum(item['VALOR'] for item in st.session_state.caixa)
+        st.metric("Total Acumulado", f"R$ {total_dia:.2f}")
 
 # --- 7. BACKUP ---
 elif st.session_state.aba_atual == "💾 Backup":
