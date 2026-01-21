@@ -59,40 +59,55 @@ if st.session_state.aba_atual == "👤 Tutores":
                         if cli['NOME'] == t_sel: st.session_state['clientes'][i] = dados
                 st.rerun()
 
-# --- 4. MÓDULO PETS (RAÇAS E IDADE) ---
+# --- 4. MÓDULO PETS (RAÇAS PRÉ-DEFINIDAS E IDADE) ---
 elif st.session_state.aba_atual == "🐾 Pets":
     st.subheader("🐾 Pacientes e Raças")
     
-    racas = sorted(["SRD (Cão)", "SRD (Gato)", "Poodle", "Pinscher", "Shih Tzu", "Yorkshire", "Golden Retriever", "Border Collie", "Persa", "Siamês"])
+    # LISTA DE RAÇAS QUE O SENHOR PEDIU
+    racas_caes = ["SRD (Cão)", "Poodle", "Pinscher", "Shih Tzu", "Yorkshire", "Golden Retriever", "Border Collie", "Bulldog", "Labrador", "Beagle"]
+    racas_gatos = ["SRD (Gato)", "Persa", "Siamês", "Maine Coon", "Angorá", "Bengal"]
+    lista_completa = sorted(racas_caes + racas_gatos)
     
     tuts = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
     idx_t = (tuts.index(st.session_state.tutor_foco) + 1) if st.session_state.tutor_foco in tuts else 0
-    tutor_f = st.selectbox("Tutor Responsável:", ["--- Selecione ---"] + tuts, index=idx_t)
+    tutor_f = st.selectbox("Selecione o Tutor:", ["--- Selecione ---"] + tuts, index=idx_t)
 
     if tutor_f != "--- Selecione ---":
+        # MOSTRAR PETS JÁ CADASTRADOS (Incluindo a Idade que faltava)
         meus_pets = [p for p in st.session_state['pets'] if p['TUTOR'] == tutor_f]
         for p in meus_pets:
             c1, c2 = st.columns([4, 1])
-            # Exibe Raça e Idade salvas
-            c1.info(f"🐕 **{p['PET']}** | Raça: **{p['RAÇA']}** | Idade/Nasc: **{p.get('IDADE', 'N/I')}**")
+            # Aqui a idade aparece fixa para o senhor ver
+            c1.info(f"🐕 **{p['PET']}** | Raça: **{p['RAÇA']}** | Idade: **{p.get('IDADE', 'N/I')}**")
             
-            # BOTÃO ATENDER CORRIGIDO: Agora ele força a troca de aba
             if c2.button(f"🩺 Atender", key=f"at_{p['PET']}"):
                 st.session_state.pet_foco = f"{p['PET']} (Tutor: {tutor_f})"
                 st.session_state.aba_atual = "📋 Prontuário"
                 st.rerun()
         
-        with st.expander("➕ Cadastrar Novo Animal"):
-            with st.form("form_pet_v85"):
-                n_p = st.text_input("Nome do Pet *").upper()
-                r_p = st.selectbox("Raça:", ["Outra"] + racas)
-                if r_p == "Outra": r_p = st.text_input("Qual raça?").upper()
-                # Campo de idade sem erro de cor
-                i_p = st.text_input("Idade ou Nascimento (Ex: 18/01/2020)")
+        st.divider()
+        with st.expander("➕ CADASTRAR NOVO ANIMAL"):
+            with st.form("form_pet_v86"):
+                col_n, col_r = st.columns(2)
+                n_p = col_n.text_input("Nome do Pet *").upper()
                 
-                if st.form_submit_button("💾 Salvar Pet"):
+                # SELETOR DE RAÇAS PRÉ-DEFINIDAS
+                r_p = col_r.selectbox("Raça do Animal:", ["Outra"] + lista_completa)
+                if r_p == "Outra":
+                    r_p = st.text_input("Digite a Raça se não estiver na lista:").upper()
+                
+                # CAMPO DE IDADE (Texto livre para facilitar: ex: '5 anos' ou '10 meses')
+                i_p = st.text_input("Idade ou Data de Nascimento:")
+                
+                if st.form_submit_button("💾 Salvar Pet no Sistema"):
                     if n_p:
-                        st.session_state['pets'].append({"PET": n_p, "RAÇA": r_p, "TUTOR": tutor_f, "IDADE": i_p})
+                        st.session_state['pets'].append({
+                            "PET": n_p, 
+                            "RAÇA": r_p, 
+                            "TUTOR": tutor_f, 
+                            "IDADE": i_p # Agora a idade é salva de verdade
+                        })
+                        st.success(f"{n_p} cadastrado com sucesso!")
                         st.rerun()
 
 # --- 5. MÓDULO PRONTUÁRIO ---
