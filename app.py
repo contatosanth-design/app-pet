@@ -82,32 +82,52 @@ if st.session_state.aba_ativa == "👤 Tutores":
                 st.rerun()
             else:
                 st.warning("Por favor, preencha Nome, E-mail e Endereço.")
-# ABA PETS: Exibe Raças e corrige o Atender
+# --- MÓDULO DE PETS ATUALIZADO ---
 elif st.session_state.aba_ativa == "🐾 Pets":
     st.subheader("🐾 Pacientes e Raças")
+    
+    # LISTA DE RAÇAS PRÉ-DEFINIDAS (Agiliza o seu dia)
+    racas_caes = ["SRD (Cão)", "Poodle", "Pinscher", "Shih Tzu", "Yorkshire", "Golden Retriever", "Bulldog", "Border Collie", "Labrador"]
+    racas_gatos = ["SRD (Gato)", "Persa", "Siamês", "Maine Coon", "Angorá", "Bengal"]
+    todas_racas = sorted(racas_caes + racas_gatos)
+
     t_lista = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
     idx_t = (t_lista.index(st.session_state.tutor_foco) + 1) if st.session_state.tutor_foco in t_lista else 0
     foco = st.selectbox("Selecione o Tutor:", ["--- Selecione ---"] + t_lista, index=idx_t)
 
     if foco != "--- Selecione ---":
+        # Exibição dos Pets já cadastrados
         pets = [p for p in st.session_state['pets'] if p['TUTOR'] == foco]
         for p in pets:
             c1, c2 = st.columns([4, 1])
-            # Raça agora visível e protegida
-            c1.info(f"🐕 **{p['PET']}** | Raça: **{p['RAÇA']}** | Idade: {p.get('NASC', 'N/I')}")
+            # Agora a Idade aparece aqui na visualização
+            c1.info(f"🐕 **{p['PET']}** | Raça: **{p['RAÇA']}** | Idade/Nasc: **{p.get('IDADE', 'N/I')}**")
             if c2.button(f"🩺 Atender", key=f"btn_{p['PET']}"):
                 st.session_state.pet_foco = f"{p['PET']} (Tutor: {foco})"
                 st.session_state.aba_ativa = "📋 Prontuário"
                 st.rerun()
         
         with st.expander("➕ Cadastrar Novo Animal"):
-            with st.form("f_pet_v81"):
+            with st.form("f_pet_v84"):
                 n_p = st.text_input("Nome do Pet *").upper()
-                r_p = st.text_input("Raça (Ex: Poodle, SRD) *").upper()
-                nasc = st.text_input("Idade/Nascimento", value="18/01/2026")
+                
+                # SELETOR DE RAÇAS (O senhor escolhe ou digita uma nova)
+                r_p = st.selectbox("Selecione a Raça ou escolha Outra:", ["Outra"] + todas_racas)
+                if r_p == "Outra":
+                    r_p = st.text_input("Digite a Raça (Caso não esteja na lista) *").upper()
+                
+                # CAMPO DE IDADE CORRIGIDO
+                f_idade = st.text_input("Idade ou Data de Nascimento (Ex: 5 anos ou 18/01/2020)")
+                
                 if st.form_submit_button("💾 Salvar Pet"):
                     if n_p and r_p:
-                        st.session_state['pets'].append({"PET": n_p, "RAÇA": r_p, "TUTOR": foco, "NASC": nasc})
+                        st.session_state['pets'].append({
+                            "PET": n_p, 
+                            "RAÇA": r_p, 
+                            "TUTOR": foco, 
+                            "IDADE": f_idade # Salva a idade corretamente agora
+                        })
+                        st.success(f"{n_p} cadastrado com sucesso!")
                         st.rerun()
 
 # ABA PRONTUÁRIO: Finaliza e limpa o foco
