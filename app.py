@@ -1,6 +1,15 @@
 import streamlit as st
 from datetime import datetime
 
+# 1. INICIALIZAÇÃO E MEMÓRIA SEGURA
+st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
+
+for k in ['clientes', 'pets', 'historico', 'caixa']:
+    if k not in st.session_state: st.session_state[k] = []
+
+if 'aba_atual' not in st.session_state: st.session_state.aba_atual = "👤 Tutores"
+if 'tutor_foco' not in st.session_state: st.session_state.tutor_foco
+
 # 1. CONFIGURAÇÃO E MEMÓRIA DO SISTEMA
 st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
 
