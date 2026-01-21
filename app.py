@@ -110,16 +110,42 @@ elif st.session_state.aba_atual == "🐾 Pets":
                         st.success(f"{n_p} cadastrado com sucesso!")
                         st.rerun()
 
-# --- 5. MÓDULO PRONTUÁRIO ---
+# --- 5. MÓDULO PRONTUÁRIO MÉDICO (ATUALIZADO) ---
 elif st.session_state.aba_atual == "📋 Prontuário":
     st.subheader("📋 Prontuário Médico")
+    
     p_lista = sorted([f"{p['PET']} (Tutor: {p['TUTOR']})" for p in st.session_state['pets']])
     idx_p = (p_lista.index(st.session_state.pet_foco) + 1) if st.session_state.pet_foco in p_lista else 0
     paciente = st.selectbox("Paciente em Atendimento:", ["--- Selecione ---"] + p_lista, index=idx_p)
 
     if paciente != "--- Selecione ---":
-        with st.form("form_pront"):
-            texto = st.text_area("Anamnese e Conduta:", height=300)
-            if st.form_submit_button("💾 Salvar Atendimento"):
-                st.session_state['historico'].append({"DATA": datetime.now().strftime("%d/%m/%Y"), "PACIENTE": paciente, "TEXTO": texto})
-                st.success("Consulta Finalizada!")
+        # Buscamos os dados do pet para mostrar a idade já salva
+        nome_pet = paciente.split(" (")[0]
+        dados_pet = next((p for p in st.session_state['pets'] if p['PET'] == nome_pet), {})
+        
+        st.info(f"📌 **Dados do Paciente:** {nome_pet} | **Idade:** {dados_pet.get('IDADE', 'Não informada')}")
+
+        with st.form("form_prontuario_v87"):
+            col1, col2 = st.columns(2)
+            # Novos campos de saúde que o senhor pediu
+            f_peso = col1.text_input("Peso (kg):", placeholder="Ex: 12.5")
+            f_temp = col2.text_input("Temperatura (°C):", placeholder="Ex: 38.5")
+            
+            st.write("📝 **Anamnese e Conduta:**")
+            st.caption("💡 Dica: Clique na caixa abaixo e aperte 'Windows + H' no seu teclado para ditar!")
+            
+            # Caixa de texto preparada para o ditado do Windows
+            f_texto = st.text_area("Descreva o atendimento:", height=250)
+            
+            if st.form_submit_button("💾 Finalizar e Salvar Atendimento"):
+                if f_texto:
+                    atendimento = {
+                        "DATA": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "PACIENTE": paciente,
+                        "PESO": f_peso,
+                        "TEMP": f_temp,
+                        "TEXTO": f_texto
+                    }
+                    st.session_state['historico'].append(atendimento)
+                    st.success(f"Prontuário de {nome_pet} salvo com sucesso!")
+                    st.rerun()
