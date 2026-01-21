@@ -147,3 +147,43 @@ elif st.session_state.aba_atual == "📋 Prontuário":
                     })
                     st.success("Atendimento salvo com sucesso!")
                     st.rerun()
+                    # --- 6. MÓDULO FINANCEIRO (CORRIGIDO) ---
+elif st.session_state.aba_atual == "💰 Financeiro":
+    st.subheader("💰 Controle de Pagamentos")
+    
+    # Busca os pets para vincular a cobrança
+    p_lista = sorted([f"{p['PET']} (Tutor: {p['TUTOR']})" for p in st.session_state['pets']])
+    paciente_fin = st.selectbox("Vincular pagamento ao paciente:", ["--- Selecione ---"] + p_lista)
+
+    if paciente_fin != "--- Selecione ---":
+        # Puxa o CPF do tutor para o recibo
+        nome_tutor = paciente_fin.split(" (Tutor: ")[1].replace(")", "")
+        tutor_data = next((c for c in st.session_state['clientes'] if c['NOME'] == nome_tutor), {})
+        
+        with st.form("form_financeiro"):
+            col1, col2 = st.columns(2)
+            valor = col1.number_input("Valor do Serviço (R$):", min_value=0.0, step=10.0)
+            forma = col2.selectbox("Forma de Pagamento:", ["Pix", "Cartão Crédito", "Cartão Débito", "Dinheiro"])
+            
+            servico = st.text_input("Descrição do Serviço:", value="Consulta Veterinária")
+            
+            if st.form_submit_button("💵 Registrar Recebimento"):
+                # Salva no histórico financeiro
+                if 'caixa' not in st.session_state: st.session_state.caixa = []
+                
+                lancamento = {
+                    "DATA": datetime.now().strftime("%d/%m/%Y"),
+                    "CLIENTE": nome_tutor,
+                    "CPF": tutor_data.get('CPF', 'N/I'),
+                    "VALOR": valor,
+                    "PAGTO": forma,
+                    "SERVICO": servico
+                }
+                st.session_state.caixa.append(lancamento)
+                st.success(f"Pagamento de R$ {valor} registrado para {nome_tutor}!")
+
+    # Exibe a tabela de ganhos do dia
+    if 'caixa' in st.session_state and len(st.session_state.caixa) > 0:
+        st.write("### 📊 Resumo de Hoje")
+        st.table(st.session_state.caixa)
+        total = sum(item
