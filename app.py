@@ -24,25 +24,46 @@ with st.sidebar:
         st.session_state.aba_ativa = escolha
         st.rerun()
 
-# --- MÓDULO DE TUTORES COM CPF ---
+# --- MÓDULO DE TUTORES (REVISADO COM CPF) ---
 if st.session_state.aba_ativa == "👤 Tutores":
     st.subheader("👤 Gestão de Clientes (Tutores)")
-    # ... (lógica de busca permanece a mesma)
+    
+    # Criamos a lista de nomes para o seletor
+    nomes = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
+    tutor_sel = st.selectbox("Buscar ou Novo:", ["--- Novo ---"] + nomes)
 
-    with st.form("f_tutor_v82"):
+    # DEFINIÇÃO DAS VARIÁVEIS (Evita o NameError da image_d5cd17)
+    v_nome, v_cpf, v_tel, v_email, v_end = ("", "", "", "", "")
+    
+    # Se um tutor for selecionado, carregamos os dados dele
+    if tutor_sel != "--- Novo ---":
+        c = next(i for i in st.session_state['clientes'] if i['NOME'] == tutor_sel)
+        v_nome = c.get('NOME', "")
+        v_cpf = c.get('CPF', "")
+        v_tel = c.get('TEL', "")
+        v_email = c.get('EMAIL', "")
+        v_end = c.get('END', "")
+        
+        if st.button(f"➡️ Ver Pets de {v_nome}"):
+            st.session_state.tutor_foco = v_nome
+            st.session_state.aba_ativa = "🐾 Pets"
+            st.rerun()
+
+    # FORMULÁRIO COM CPF
+    with st.form("f_tutor_v83"):
         f_nome = st.text_input("Nome Completo *", value=v_nome).upper()
         
-        # ADICIONADO CAMPO DE CPF AQUI
-        f_cpf = st.text_input("CPF (Para Recibos/Notas)", value=c.get('CPF', "") if tutor_sel != "--- Novo ---" else "")
+        # O CPF agora fica aqui, logo abaixo do nome
+        f_cpf = st.text_input("CPF (Para Recibos)", value=v_cpf)
         
         col1, col2 = st.columns(2)
         f_tel = col1.text_input("WhatsApp / Telefone", value=v_tel)
         f_email = col2.text_input("E-mail (Obrigatório) *", value=v_email).lower()
+        
         f_end = st.text_area("Endereço Completo *", value=v_end)
         
         if st.form_submit_button("💾 Salvar Cliente"):
             if f_nome and f_email and f_end:
-                # Incluímos o CPF nos dados salvos
                 novo_dado = {
                     "NOME": f_nome, 
                     "CPF": f_cpf, 
@@ -50,9 +71,17 @@ if st.session_state.aba_ativa == "👤 Tutores":
                     "EMAIL": f_email, 
                     "END": f_end
                 }
-                # ... (lógica de append/update)
-                st.success(f"Cadastro de {f_nome} atualizado com CPF!")
+                # Lógica para salvar novo ou atualizar existente
+                if tutor_sel == "--- Novo ---":
+                    st.session_state['clientes'].append(novo_dado)
+                else:
+                    for i, cli in enumerate(st.session_state['clientes']):
+                        if cli['NOME'] == tutor_sel:
+                            st.session_state['clientes'][i] = novo_dado
+                st.success(f"Dados de {f_nome} salvos com sucesso!")
                 st.rerun()
+            else:
+                st.warning("Por favor, preencha Nome, E-mail e Endereço.")
 # ABA PETS: Exibe Raças e corrige o Atender
 elif st.session_state.aba_ativa == "🐾 Pets":
     st.subheader("🐾 Pacientes e Raças")
