@@ -97,53 +97,74 @@ elif st.session_state.aba_atual == "📋 Prontuário":
                 st.session_state['historico'].append({"DATA": datetime.now().strftime("%d/%m/%Y %H:%M"), "PACIENTE": paciente, "PESO": f_peso, "TEMP": f_temp, "TEXTO": f_texto})
                 st.success("Consulta Salva!")
 
-# --- 6. MÓDULO FINANCEIRO COMPLETO (v9.3) ---
+# --- 6. MÓDULO FINANCEIRO COM LISTA DE PRODUTOS (v9.4) ---
 elif st.session_state.aba_atual == "💰 Financeiro":
-    st.subheader("💰 Controle de Pagamentos e Serviços")
+    st.subheader("💰 Fechamento de Conta e Recibo")
     
-    # Lista de pacientes para vincular a cobrança
+    # 1. Tabela de Preços Sugeridos (O senhor pode alterar os valores aqui no código depois)
+    tabela_precos = {
+        "Consulta Local": 150.0,
+        "Consulta Residencial": 250.0,
+        "Vacina V10": 120.0,
+        "Vacina Raiva": 80.0,
+        "Medicamento (Geral)": 50.0,
+        "Procedimento Simples": 100.0
+    }
+
     p_lista = sorted([f"{p['PET']} (Tutor: {p['TUTOR']})" for p in st.session_state['pets']])
-    paciente_fin = st.selectbox("Vincular ao paciente:", ["--- Selecione ---"] + p_lista)
-    
+    paciente_fin = st.selectbox("Selecione o Paciente para Cobrança:", ["--- Selecione ---"] + p_lista)
+
     if paciente_fin != "--- Selecione ---":
-        with st.form("form_fin_v93"):
-            col1, col2 = st.columns(2)
-            
-            # Tipos de serviços combinados
-            tipo_servico = col1.selectbox("Tipo de Serviço:", [
-                "Consulta Local", 
-                "Consulta Residencial", 
-                "Vacina", 
-                "Medicamento", 
-                "Outros"
-            ])
-            
-            valor = col1.number_input("Valor (R$):", min_value=0.0, step=5.0)
-            forma = col2.selectbox("Forma de Pagamento:", ["Pix", "Dinheiro", "Cartão Débito", "Cartão Crédito"])
-            detalhes = col2.text_input("Detalhes (Ex: Nome da Vacina/Remédio):")
+        # Inicializa um "carrinho" temporário para a sessão se não existir
+        if 'carrinho' not in st.session_state: st.session_state.carrinho = []
 
-            if st.form_submit_button("💵 Registrar e Gerar Recibo"):
-                novo_lancamento = {
-                    "DATA": datetime.now().strftime("%d/%m/%Y"),
-                    "PACIENTE": paciente_fin,
-                    "SERVIÇO": tipo_servico,
-                    "DETALHES": detalhes,
-                    "VALOR": valor,
-                    "PAGTO": forma
-                }
-                st.session_state.caixa.append(novo_lancamento)
-                st.success(f"Lançamento de {tipo_servico} realizado com sucesso!")
-                st.rerun()
-
-    # Exibição do histórico de hoje
-    if st.session_state.caixa:
-        st.write("### 📊 Movimentação do Dia")
-        st.table(st.session_state.caixa)
+        col1, col2, col3 = st.columns([2, 1, 1])
+        servico_nome = col1.selectbox("Selecione o Produto/Serviço:", list(tabela_precos.keys()) + ["Outro"])
         
-        # Soma total (Corrigindo o erro da linha 198)
-        total_dia = sum(item['VALOR'] for item in st.session_state.caixa)
-        st.metric("Total Acumulado", f"R$ {total_dia:.2f}")
+        # Define o preço inicial baseado na tabela, mas permite edição
+        preco_sugerido = tabela_precos.get(servico_nome, 0.0)
+        valor_final = col2.number_input("Preço (R$):", min_value=0.0, value=preco_sugerido, step=5.0)
+        
+        if col3.button("➕ Adicionar à Conta"):
+            st.session_state.carrinho.append({"ITEM": servico_nome, "VALOR": valor_final})
+            st.rerun()
 
+        # Exibe o que está sendo cobrado no momento
+        if st.session_state.carrinho:
+            st.write("---")
+            st.write("### 📝 Itens da Guia Atual")
+            total_atual = 0
+            for i, item in enumerate(st.session_state.carrinho):
+                c1, c2, c3 = st.columns([3, 1, 1])
+                c1.text(f"• {item['ITEM']}")
+                c2.text(f"R$ {item['VALOR']:.2f}")
+                if c3.button("❌", key=f"del_{i}"):
+                    st.session_state.carrinho.pop(i)
+                    st.rerun()
+                total_atual += item['VALOR']
+
+            st.markdown(f"#### **Total a Pagar: R$ {total_atual:.2f}**")
+            
+            with st.form("finalizar_v94"):
+                forma = st.selectbox("Forma de Pagamento:", ["Pix", "Dinheiro", "Cartão"])
+                if st.form_submit_button("💾 Finalizar Atendimento e Salvar no Caixa"):
+                    # Salva no histórico permanente
+                    st.session_state.caixa.append({
+                        "DATA": datetime.now().strftime("%d/%m/%Y"),
+                        "PACIENTE": paciente_fin,
+                        "ITENS": ", ".join([x['ITEM'] for x in st.session_state.carrinho]),
+                        "VALOR": total_atual,
+                        "PAGTO": forma
+                    })
+                    st.session_state.carrinho = [] # Limpa o carrinho para o próximo
+                    st.success("Pagamento registrado com sucesso!")
+                    st.rerun()
+
+    # 📊 Resumo Geral do Dia (Histórico de Recebimentos)
+    if st.session_state.caixa:
+        st.divider()
+        st.write("### 📊 Histórico de Hoje")
+        st.table(st.session_state.caixa)
 # --- 7. BACKUP ---
 elif st.session_state.aba_atual == "💾 Backup":
     st.subheader("💾 Salvar Dados")
