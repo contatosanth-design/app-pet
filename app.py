@@ -1,23 +1,13 @@
 import streamlit as st
 from datetime import datetime
 
-# 1. INICIALIZAÇÃO E MEMÓRIA SEGURA
+# 1. CONFIGURAÇÃO INICIAL E MEMÓRIA
 st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
 
+# Inicializa as listas de dados se estiverem vazias
 for k in ['clientes', 'pets', 'historico', 'caixa']:
     if k not in st.session_state: st.session_state[k] = []
 
-if 'aba_atual' not in st.session_state: st.session_state.aba_atual = "👤 Tutores"
-if 'tutor_foco' not in st.session_state: st.session_state.tutor_foco
-
-# 1. CONFIGURAÇÃO E MEMÓRIA DO SISTEMA
-st.set_page_config(page_title="Ribeira Vet Pro", layout="wide")
-
-# Inicialização de dados para evitar erros de tela
-for k in ['clientes', 'pets', 'historico']:
-    if k not in st.session_state: st.session_state[k] = []
-
-# Controle de navegação robusto
 if 'aba_atual' not in st.session_state: st.session_state.aba_atual = "👤 Tutores"
 if 'tutor_foco' not in st.session_state: st.session_state.tutor_foco = None
 if 'pet_foco' not in st.session_state: st.session_state.pet_foco = None
@@ -26,9 +16,8 @@ if 'pet_foco' not in st.session_state: st.session_state.pet_foco = None
 with st.sidebar:
     st.title("🐾 Ribeira Vet Pro")
     opcoes = ["👤 Tutores", "🐾 Pets", "📋 Prontuário", "💰 Financeiro", "💾 Backup"]
-    # Sincroniza o menu com o estado atual do sistema
-    index_atual = opcoes.index(st.session_state.aba_atual)
-    escolha = st.radio("NAVEGAÇÃO", opcoes, index=index_atual)
+    idx = opcoes.index(st.session_state.aba_atual)
+    escolha = st.radio("NAVEGAÇÃO", opcoes, index=idx)
     
     if escolha != st.session_state.aba_atual:
         st.session_state.aba_atual = escolha
@@ -37,7 +26,6 @@ with st.sidebar:
 # --- 3. MÓDULO TUTORES (COM CPF) ---
 if st.session_state.aba_atual == "👤 Tutores":
     st.subheader("👤 Gestão de Clientes (Tutores)")
-    
     nomes = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
     t_sel = st.selectbox("Buscar ou Novo:", ["--- Novo ---"] + nomes)
 
@@ -45,20 +33,18 @@ if st.session_state.aba_atual == "👤 Tutores":
     if t_sel != "--- Novo ---":
         c = next(i for i in st.session_state['clientes'] if i['NOME'] == t_sel)
         v_nome, v_cpf, v_tel, v_email, v_end = c.get('NOME',''), c.get('CPF',''), c.get('TEL',''), c.get('EMAIL',''), c.get('END','')
-        
         if st.button(f"➡️ Ver Animais de {v_nome}"):
             st.session_state.tutor_foco = v_nome
             st.session_state.aba_atual = "🐾 Pets"
             st.rerun()
 
-    with st.form("form_tutor_v85"):
+    with st.form("form_tutor_v92"):
         f_nome = st.text_input("Nome Completo *", value=v_nome).upper()
         f_cpf = st.text_input("CPF (Para Recibos)", value=v_cpf)
         col1, col2 = st.columns(2)
         f_tel = col1.text_input("WhatsApp / Telefone", value=v_tel)
         f_email = col2.text_input("E-mail (Obrigatório) *", value=v_email).lower()
         f_end = st.text_area("Endereço Completo *", value=v_end)
-        
         if st.form_submit_button("💾 Salvar Cliente"):
             if f_nome and f_email:
                 dados = {"NOME": f_nome, "CPF": f_cpf, "TEL": f_tel, "EMAIL": f_email, "END": f_end}
@@ -68,131 +54,68 @@ if st.session_state.aba_atual == "👤 Tutores":
                         if cli['NOME'] == t_sel: st.session_state['clientes'][i] = dados
                 st.rerun()
 
-# --- 4. MÓDULO PETS (RAÇAS PRÉ-DEFINIDAS E IDADE) ---
+# --- 4. MÓDULO PETS (RAÇAS E IDADE) ---
 elif st.session_state.aba_atual == "🐾 Pets":
     st.subheader("🐾 Pacientes e Raças")
-    
-    # LISTA DE RAÇAS QUE O SENHOR PEDIU
-    racas_caes = ["SRD (Cão)", "Poodle", "Pinscher", "Shih Tzu", "Yorkshire", "Golden Retriever", "Border Collie", "Bulldog", "Labrador", "Beagle"]
-    racas_gatos = ["SRD (Gato)", "Persa", "Siamês", "Maine Coon", "Angorá", "Bengal"]
-    lista_completa = sorted(racas_caes + racas_gatos)
-    
+    racas = sorted(["SRD (Cão)", "SRD (Gato)", "Poodle", "Pinscher", "Shih Tzu", "Yorkshire", "Golden Retriever", "Border Collie", "Persa", "Siamês"])
     tuts = sorted(list(set([c['NOME'] for c in st.session_state['clientes']])))
     idx_t = (tuts.index(st.session_state.tutor_foco) + 1) if st.session_state.tutor_foco in tuts else 0
-    tutor_f = st.selectbox("Selecione o Tutor:", ["--- Selecione ---"] + tuts, index=idx_t)
+    tutor_f = st.selectbox("Tutor Responsável:", ["--- Selecione ---"] + tuts, index=idx_t)
 
     if tutor_f != "--- Selecione ---":
-        # MOSTRAR PETS JÁ CADASTRADOS (Incluindo a Idade que faltava)
-        meus_pets = [p for p in st.session_state['pets'] if p['TUTOR'] == tutor_f]
-        for p in meus_pets:
+        for p in [p for p in st.session_state['pets'] if p['TUTOR'] == tutor_f]:
             c1, c2 = st.columns([4, 1])
-            # Aqui a idade aparece fixa para o senhor ver
             c1.info(f"🐕 **{p['PET']}** | Raça: **{p['RAÇA']}** | Idade: **{p.get('IDADE', 'N/I')}**")
-            
             if c2.button(f"🩺 Atender", key=f"at_{p['PET']}"):
                 st.session_state.pet_foco = f"{p['PET']} (Tutor: {tutor_f})"
                 st.session_state.aba_atual = "📋 Prontuário"
                 st.rerun()
-        
-        st.divider()
-        with st.expander("➕ CADASTRAR NOVO ANIMAL"):
-            with st.form("form_pet_v86"):
-                col_n, col_r = st.columns(2)
-                n_p = col_n.text_input("Nome do Pet *").upper()
-                
-                # SELETOR DE RAÇAS PRÉ-DEFINIDAS
-                r_p = col_r.selectbox("Raça do Animal:", ["Outra"] + lista_completa)
-                if r_p == "Outra":
-                    r_p = st.text_input("Digite a Raça se não estiver na lista:").upper()
-                
-                # CAMPO DE IDADE (Texto livre para facilitar: ex: '5 anos' ou '10 meses')
-                i_p = st.text_input("Idade ou Data de Nascimento:")
-                
-                if st.form_submit_button("💾 Salvar Pet no Sistema"):
+        with st.expander("➕ Cadastrar Novo Animal"):
+            with st.form("form_pet_v92"):
+                n_p = st.text_input("Nome do Pet *").upper()
+                r_p = st.selectbox("Raça:", ["Outra"] + racas)
+                if r_p == "Outra": r_p = st.text_input("Qual raça?").upper()
+                i_p = st.text_input("Idade ou Nascimento (Ex: 18/01/2020)")
+                if st.form_submit_button("💾 Salvar Pet"):
                     if n_p:
-                        st.session_state['pets'].append({
-                            "PET": n_p, 
-                            "RAÇA": r_p, 
-                            "TUTOR": tutor_f, 
-                            "IDADE": i_p # Agora a idade é salva de verdade
-                        })
-                        st.success(f"{n_p} cadastrado com sucesso!")
+                        st.session_state['pets'].append({"PET": n_p, "RAÇA": r_p, "TUTOR": tutor_f, "IDADE": i_p})
                         st.rerun()
 
-# --- MÓDULO PRONTUÁRIO FINAL (COM SAÚDE E DITADO) ---
+# --- 5. MÓDULO PRONTUÁRIO ---
 elif st.session_state.aba_atual == "📋 Prontuário":
     st.subheader("📋 Prontuário Médico")
-    
-    # Seleção automática do paciente vindo da aba Pets
     p_lista = sorted([f"{p['PET']} (Tutor: {p['TUTOR']})" for p in st.session_state['pets']])
     idx_p = (p_lista.index(st.session_state.pet_foco) + 1) if st.session_state.pet_foco in p_lista else 0
-    paciente = st.selectbox("Paciente em Atendimento:", ["--- Selecione ---"] + p_lista, index=idx_p)
-
+    paciente = st.selectbox("Paciente:", ["--- Selecione ---"] + p_lista, index=idx_p)
     if paciente != "--- Selecione ---":
-        nome_pet = paciente.split(" (")[0]
-        dados_pet = next((p for p in st.session_state['pets'] if p['PET'] == nome_pet), {})
-        
-        # Banner de informações fixas
-        st.info(f"📌 **Dados do Paciente:** {nome_pet} | **Idade/Nasc:** {dados_pet.get('IDADE', 'N/I')}")
+        with st.form("form_pront_v92"):
+            col1, col2 = st.columns(2)
+            f_peso = col1.text_input("Peso (kg):")
+            f_temp = col2.text_input("Temperatura (°C):")
+            f_texto = st.text_area("Anamnese (Dica: Use Windows + H para ditar):", height=250)
+            if st.form_submit_button("💾 Salvar Atendimento"):
+                st.session_state['historico'].append({"DATA": datetime.now().strftime("%d/%m/%Y %H:%M"), "PACIENTE": paciente, "PESO": f_peso, "TEMP": f_temp, "TEXTO": f_texto})
+                st.success("Consulta Salva!")
 
-        with st.form("form_saude_v88"):
-            c1, c2 = st.columns(2)
-            f_peso = c1.text_input("Peso (kg):", placeholder="Ex: 12.5")
-            f_temp = c2.text_input("Temperatura (°C):", placeholder="Ex: 38.5")
-            
-            st.write("📝 **Anamnese e Conduta:**")
-            st.caption("🎙️ Clique abaixo e use **Windows + H** para ditar o prontuário.")
-            
-            f_texto = st.text_area("Descreva o atendimento:", height=300)
-            
-            if st.form_submit_button("💾 Finalizar e Salvar"):
-                if f_texto:
-                    st.session_state['historico'].append({
-                        "DATA": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                        "PACIENTE": paciente,
-                        "PESO": f_peso,
-                        "TEMP": f_temp,
-                        "TEXTO": f_texto
-                    })
-                    st.success("Atendimento salvo com sucesso!")
-                    st.rerun()
-                    # --- 6. MÓDULO FINANCEIRO (CORRIGIDO) ---
+# --- 6. MÓDULO FINANCEIRO (CORRIGIDO) ---
 elif st.session_state.aba_atual == "💰 Financeiro":
     st.subheader("💰 Controle de Pagamentos")
-    
-    # Busca os pets para vincular a cobrança
     p_lista = sorted([f"{p['PET']} (Tutor: {p['TUTOR']})" for p in st.session_state['pets']])
-    paciente_fin = st.selectbox("Vincular pagamento ao paciente:", ["--- Selecione ---"] + p_lista)
-
+    paciente_fin = st.selectbox("Vincular ao paciente:", ["--- Selecione ---"] + p_lista)
     if paciente_fin != "--- Selecione ---":
-        # Puxa o CPF do tutor para o recibo
-        nome_tutor = paciente_fin.split(" (Tutor: ")[1].replace(")", "")
-        tutor_data = next((c for c in st.session_state['clientes'] if c['NOME'] == nome_tutor), {})
-        
-        with st.form("form_financeiro"):
-            col1, col2 = st.columns(2)
-            valor = col1.number_input("Valor do Serviço (R$):", min_value=0.0, step=10.0)
-            forma = col2.selectbox("Forma de Pagamento:", ["Pix", "Cartão Crédito", "Cartão Débito", "Dinheiro"])
-            
-            servico = st.text_input("Descrição do Serviço:", value="Consulta Veterinária")
-            
-            if st.form_submit_button("💵 Registrar Recebimento"):
-                # Salva no histórico financeiro
-                if 'caixa' not in st.session_state: st.session_state.caixa = []
-                
-                lancamento = {
-                    "DATA": datetime.now().strftime("%d/%m/%Y"),
-                    "CLIENTE": nome_tutor,
-                    "CPF": tutor_data.get('CPF', 'N/I'),
-                    "VALOR": valor,
-                    "PAGTO": forma,
-                    "SERVICO": servico
-                }
-                st.session_state.caixa.append(lancamento)
-                st.success(f"Pagamento de R$ {valor} registrado para {nome_tutor}!")
-
-    # Exibe a tabela de ganhos do dia
-    if 'caixa' in st.session_state and len(st.session_state.caixa) > 0:
-        st.write("### 📊 Resumo de Hoje")
+        with st.form("form_fin_v92"):
+            valor = st.number_input("Valor (R$):", min_value=0.0, step=10.0)
+            forma = st.selectbox("Forma:", ["Pix", "Cartão", "Dinheiro"])
+            if st.form_submit_button("💵 Registrar"):
+                st.session_state.caixa.append({"DATA": datetime.now().strftime("%d/%m/%Y"), "PACIENTE": paciente_fin, "VALOR": valor, "PAGTO": forma})
+                st.rerun()
+    if st.session_state.caixa:
         st.table(st.session_state.caixa)
-        total = sum(item
+        total = sum(item['VALOR'] for item in st.session_state.caixa)
+        st.metric("Total do Dia", f"R$ {total:.2f}")
+
+# --- 7. BACKUP ---
+elif st.session_state.aba_atual == "💾 Backup":
+    st.subheader("💾 Salvar Dados")
+    dados_total = str(st.session_state)
+    st.download_button("📥 Baixar Arquivo de Segurança", data=dados_total, file_name=f"backup_vet_{datetime.now().strftime('%d_%m')}.txt")
