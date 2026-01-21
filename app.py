@@ -165,8 +165,21 @@ elif st.session_state.aba_atual == "💰 Financeiro":
         st.divider()
         st.write("### 📊 Histórico de Hoje")
         st.table(st.session_state.caixa)
-# --- 7. BACKUP ---
+# --- 7. MÓDULO BACKUP PROFISSIONAL (v9.5) ---
 elif st.session_state.aba_atual == "💾 Backup":
-    st.subheader("💾 Salvar Dados")
-    dados_total = str(st.session_state)
-    st.download_button("📥 Baixar Arquivo de Segurança", data=dados_total, file_name=f"backup_vet_{datetime.now().strftime('%d_%m')}.txt")
+    st.subheader("💾 Central de Segurança dos Dados")
+    
+    st.write("### 1. Exportar para Excel (Financeiro)")
+    if st.session_state.caixa:
+        import pandas as pd
+        df_fin = pd.DataFrame(st.session_state.caixa)
+        csv = df_fin.to_csv(index=False).encode('utf-8-sig')
+        st.download_button("📥 Baixar Planilha de Ganhos (Excel)", data=csv, file_name=f"financeiro_vet_{datetime.now().strftime('%d_%m')}.csv", mime='text/csv')
+    else:
+        st.info("Ainda não há lançamentos financeiros para exportar.")
+
+    st.divider()
+    st.write("### 2. Backup Completo do Sistema")
+    st.warning("Este arquivo abaixo serve para restaurar o sistema inteiro em caso de pane.")
+    dados_total = str(st.session_state.to_dict()) # Transforma tudo em texto para segurança
+    st.download_button("📥 Baixar Backup Geral (Sistema)", data=dados_total, file_name=f"sistema_completo_{datetime.now().strftime('%d_%m')}.txt")
