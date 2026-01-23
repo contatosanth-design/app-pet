@@ -97,74 +97,51 @@ elif st.session_state.aba_atual == "📋 Prontuário":
                 st.session_state['historico'].append({"DATA": datetime.now().strftime("%d/%m/%Y %H:%M"), "PACIENTE": paciente, "PESO": f_peso, "TEMP": f_temp, "TEXTO": f_texto})
                 st.success("Consulta Salva!")
 
-# --- 6. MÓDULO FINANCEIRO COM LISTA DE PRODUTOS (v9.4) ---
+import urllib.parse
+
+# --- 6. MÓDULO FINANCEIRO COM WHATSAPP (v9.6) ---
 elif st.session_state.aba_atual == "💰 Financeiro":
-    st.subheader("💰 Fechamento de Conta e Recibo")
+    # ... (mantenha a parte de seleção de paciente e carrinho igual à v9.4)
     
-    # 1. Tabela de Preços Sugeridos (O senhor pode alterar os valores aqui no código depois)
-    tabela_precos = {
-        "Consulta Local": 150.0,
-        "Consulta Residencial": 250.0,
-        "Vacina V10": 120.0,
-        "Vacina Raiva": 80.0,
-        "Medicamento (Geral)": 50.0,
-        "Procedimento Simples": 100.0
-    }
-
-    p_lista = sorted([f"{p['PET']} (Tutor: {p['TUTOR']})" for p in st.session_state['pets']])
-    paciente_fin = st.selectbox("Selecione o Paciente para Cobrança:", ["--- Selecione ---"] + p_lista)
-
-    if paciente_fin != "--- Selecione ---":
-        # Inicializa um "carrinho" temporário para a sessão se não existir
-        if 'carrinho' not in st.session_state: st.session_state.carrinho = []
-
-        col1, col2, col3 = st.columns([2, 1, 1])
-        servico_nome = col1.selectbox("Selecione o Produto/Serviço:", list(tabela_precos.keys()) + ["Outro"])
-        
-        # Define o preço inicial baseado na tabela, mas permite edição
-        preco_sugerido = tabela_precos.get(servico_nome, 0.0)
-        valor_final = col2.number_input("Preço (R$):", min_value=0.0, value=preco_sugerido, step=5.0)
-        
-        if col3.button("➕ Adicionar à Conta"):
-            st.session_state.carrinho.append({"ITEM": servico_nome, "VALOR": valor_final})
-            st.rerun()
-
-        # Exibe o que está sendo cobrado no momento
-        if st.session_state.carrinho:
-            st.write("---")
-            st.write("### 📝 Itens da Guia Atual")
-            total_atual = 0
-            for i, item in enumerate(st.session_state.carrinho):
-                c1, c2, c3 = st.columns([3, 1, 1])
-                c1.text(f"• {item['ITEM']}")
-                c2.text(f"R$ {item['VALOR']:.2f}")
-                if c3.button("❌", key=f"del_{i}"):
-                    st.session_state.carrinho.pop(i)
-                    st.rerun()
-                total_atual += item['VALOR']
-
-            st.markdown(f"#### **Total a Pagar: R$ {total_atual:.2f}**")
-            
-            with st.form("finalizar_v94"):
-                forma = st.selectbox("Forma de Pagamento:", ["Pix", "Dinheiro", "Cartão"])
-                if st.form_submit_button("💾 Finalizar Atendimento e Salvar no Caixa"):
-                    # Salva no histórico permanente
-                    st.session_state.caixa.append({
-                        "DATA": datetime.now().strftime("%d/%m/%Y"),
-                        "PACIENTE": paciente_fin,
-                        "ITENS": ", ".join([x['ITEM'] for x in st.session_state.carrinho]),
-                        "VALOR": total_atual,
-                        "PAGTO": forma
-                    })
-                    st.session_state.carrinho = [] # Limpa o carrinho para o próximo
-                    st.success("Pagamento registrado com sucesso!")
-                    st.rerun()
-
-    # 📊 Resumo Geral do Dia (Histórico de Recebimentos)
+    # Após finalizar o pagamento no formulário:
     if st.session_state.caixa:
+        ultimo = st.session_state.caixa[-1]
+        tutor_nome = ultimo['PACIENTE'].split(" (Tutor: ")[1].replace(")", "")
+        
+        # Busca o telefone do tutor cadastrado
+        tutor_data = next((c for c in st.session_state['clientes'] if c['NOME'] == tutor_nome), {})
+        telefone = tutor_data.get('TEL', '').replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+        
         st.divider()
-        st.write("### 📊 Histórico de Hoje")
-        st.table(st.session_state.caixa)
+        st.write("### 📄 Recibo do Último Atendimento")
+        
+        # Monta o texto do recibo
+        texto_recibo = (
+            f"*RECIBO - RIBEIRA VET PRO*\n\n"
+            f"Olá, {tutor_nome}!\n"
+            f"Segue o comprovante de atendimento do(a) *{ultimo['PACIENTE'].split(' (')[0]}*.\n"
+            f"--------------------------\n"
+            f"*Serviços:* {ultimo['ITENS']}\n"
+            f"*Total:* R$ {ultimo['VALOR']:.2f}\n"
+            f"*Pagamento:* {ultimo['PAGTO']}\n"
+            f"--------------------------\n"
+            f"Data: {ultimo['DATA']}\n\n"
+            f"Obrigado pela confiança!"
+        )
+        
+        st.info(texto_recibo)
+        
+        # Link para o WhatsApp
+        texto_url = urllib.parse.quote(texto_recibo)
+        link_zap = f"https://wa.me/55{telefone}?text={texto_url}"
+        
+        if telefone:
+            st.link_button("📲 Enviar Recibo por WhatsApp", link_zap)
+        else:
+            st.warning("⚠️ Telefone não cadastrado para este tutor. Cadastre na aba 'Tutores'.")
+
+    # Tabela de resumo (mantenha a mesma da v9.4)
+        
 # --- 7. MÓDULO BACKUP PROFISSIONAL (v9.5) ---
 elif st.session_state.aba_atual == "💾 Backup":
     st.subheader("💾 Central de Segurança dos Dados")
