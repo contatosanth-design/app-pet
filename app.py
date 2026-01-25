@@ -3,11 +3,16 @@ from datetime import datetime
 import urllib.parse
 import ast
 
-# 1. AJUSTE DE TELA PARA ANDROID
+# 1. CONFIGURAÇÃO MOBILE
 st.set_page_config(page_title="Ribeira Vet Pro", layout="centered")
 
+# Inicialização de memória
 for k in ['clientes', 'pets', 'historico', 'caixa', 'carrinho']:
     if k not in st.session_state: st.session_state[k] = []
+
+# --- NOVO: AVISO DE DADOS ZERADOS ---
+if not st.session_state.clientes:
+    st.warning("⚠️ O sistema reiniciou. Vá em '💾 Backup' para restaurar seus dados.")
 
 if 'aba_atual' not in st.session_state: st.session_state.aba_atual = "👤 Tutores"
 
@@ -20,57 +25,32 @@ with st.sidebar:
         st.session_state.aba_atual = escolha
         st.rerun()
 
-# --- 5. MÓDULO PRONTUÁRIO (BOTÃO LARGO PARA CELULAR) ---
-elif st.session_state.aba_atual == "📋 Prontuário":
-    st.subheader("📋 Prontuário Médico")
-    p_lista = sorted([f"{p['PET']} (Tutor: {p['TUTOR']})" for p in st.session_state['pets']])
-    paciente = st.selectbox("Selecione o Paciente:", ["--- Selecione ---"] + p_lista)
+# --- 7. MÓDULO BACKUP E RESTAURAÇÃO (O MAIS IMPORTANTE AGORA) ---
+elif st.session_state.aba_atual == "💾 Backup":
+    st.subheader("💾 Recuperar ou Salvar Dados")
     
-    if paciente != "--- Selecione ---":
-        with st.form("f_pront_v101"):
-            st.info(f"📍 Atendendo: {paciente}")
-            c1, c2 = st.columns(2)
-            f_peso = c1.text_input("Peso (kg)")
-            f_temp = c2.text_input("Temp (°C)")
-            
-            st.write("🎙️ **Dica:** Clique no campo abaixo e use o **Microfone do seu Teclado** para ditar.")
-            f_texto = st.text_area("Descreva a Anamnese/Conduta:", height=300)
-            
-            # Botão grande para salvar com o dedo
-            if st.form_submit_button("💾 SALVAR ATENDIMENTO FINALIZADO", use_container_width=True):
-                if f_texto:
-                    st.session_state['historico'].append({
-                        "DATA": datetime.now().strftime("%d/%m/%Y"),
-                        "PACIENTE": paciente,
-                        "TEXTO": f_texto,
-                        "PESO": f_peso,
-                        "TEMP": f_temp
-                    })
-                    st.success("Prontuário salvo com sucesso!")
-                    st.rerun()
-
-# --- 6. FINANCEIRO (BOTÕES LARGOS) ---
-elif st.session_state.aba_atual == "💰 Financeiro":
-    st.subheader("💰 Financeiro")
-    precos = {"Consulta Local": 150.0, "Consulta Residencial": 250.0, "Vacina": 120.0, "Medicamento": 50.0}
-    p_lista = sorted([f"{p['PET']} (Tutor: {p['TUTOR']})" for p in st.session_state['pets']])
-    paciente_fin = st.selectbox("Cobrar de:", ["--- Selecione ---"] + p_lista)
+    # BOTÃO DE SUBIR (RESTAURAR) - FAÇA ISSO AO ABRIR O LINK
+    st.write("### 📤 1. Restaurar o que sumiu")
+    arquivo = st.file_uploader("Escolha o arquivo 'backup_vet.txt':", type="txt")
+    if arquivo and st.button("🔄 RESTAURAR DADOS AGORA", use_container_width=True):
+        try:
+            d_rec = ast.literal_eval(arquivo.read().decode("utf-8"))
+            st.session_state.clientes = d_rec.get('clientes', [])
+            st.session_state.pets = d_rec.get('pets', [])
+            st.session_state.historico = d_rec.get('historico', [])
+            st.session_state.caixa = d_rec.get('caixa', [])
+            st.success("✅ Tudo de volta! Pode trabalhar.")
+        except:
+            st.error("Erro ao ler o arquivo. Use o backup mais recente.")
     
-    if paciente_fin != "--- Selecione ---":
-        serv = st.selectbox("O que foi feito?", list(precos.keys()) + ["Outro"])
-        valor = st.number_input("Preço R$:", value=precos.get(serv, 0.0))
-        
-        if st.button("➕ ADICIONAR AO CARRINHO", use_container_width=True):
-            st.session_state.carrinho.append({"ITEM": serv, "VALOR": valor})
-            st.rerun()
-            
-        if st.session_state.carrinho:
-            total = sum(item['VALOR'] for item in st.session_state.carrinho)
-            st.markdown(f"### **Total: R$ {total:.2f}**")
-            
-            if st.button("✅ FINALIZAR E GERAR RECIBO", use_container_width=True):
-                # ... (Lógica de salvar e gerar link do WhatsApp v9.7)
-                st.session_state.caixa.append({"DATA": datetime.now().strftime("%d/%m/%Y"), "PACIENTE": paciente_fin, "VALOR": total})
-                st.success("Venda registrada!")
-                st.session_state.carrinho = []
-                st.rerun()
+    st.divider()
+    
+    # BOTÃO DE BAIXAR (SALVAR) - FAÇA ISSO ANTES DE FECHAR
+    st.write("### 📥 2. Salvar trabalho de agora")
+    dados = {
+        'clientes': st.session_state.clientes, 
+        'pets': st.session_state.pets, 
+        'historico': st.session_state.historico, 
+        'caixa': st.session_state.caixa
+    }
+    st.download_button("📥 BAIXAR BACKUP NO CELULAR", str(dados), file_name="backup_vet.txt", use_container_width=True)
