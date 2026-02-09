@@ -3,16 +3,18 @@ import React, { useState, useEffect } from 'react';
 import { Tutor, Pet, MedicalRecord, AppTab } from './types';
 import { getAiDiagnosisSuggestion } from './services/geminiService';
 
-// --- Icons (SVG to avoid "invalid character" errors in some environments) ---
+// --- Icons (SVG only to avoid "invalid character" errors) ---
 const Icons = {
   Tutor: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
   Pet: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>,
   Record: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
   Backup: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>,
-  AI: () => <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 10-2 0v1a1 1 0 102 0v-1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 10-2 0v1a1 1 0 102 0v-1zM8 16v-1a1 1 0 10-2 0v1a1 1 0 102 0zM12 16v-1a1 1 0 10-2 0v1a1 1 0 102 0zM16 16v-1a1 1 0 10-2 0v1a1 1 0 102 0z" /></svg>
+  AI: () => <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 10-2 0v1a1 1 0 102 0v-1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 10-2 0v1a1 1 0 102 0v-1zM8 16v-1a1 1 0 10-2 0v1a1 1 0 102 0zM12 16v-1a1 1 0 10-2 0v1a1 1 0 102 0zM16 16v-1a1 1 0 10-2 0v1a1 1 0 102 0z" /></svg>,
+  Check: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>,
+  Warning: () => <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>,
+  ArrowRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>,
+  Sparkles: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
 };
-
-// --- Helper Components ---
 
 const Sidebar: React.FC<{ 
   currentTab: AppTab; 
@@ -28,7 +30,7 @@ const Sidebar: React.FC<{
   return (
     <div className="w-64 bg-white border-r h-screen flex flex-col fixed left-0 top-0 z-10">
       <div className="p-6 border-b flex items-center space-x-2">
-        <div className="text-blue-600 font-bold text-2xl">RV</div>
+        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">RV</div>
         <h1 className="text-xl font-bold text-slate-800">Ribeira Vet</h1>
       </div>
       <nav className="flex-1 p-4 space-y-2">
@@ -48,7 +50,7 @@ const Sidebar: React.FC<{
         ))}
       </nav>
       <div className="p-4 border-t text-[10px] text-slate-400 text-center uppercase tracking-widest font-bold">
-        v2.5 Pro AI &copy; 2024
+        v2.6 Pro AI (c) 2024
       </div>
     </div>
   );
@@ -61,7 +63,6 @@ export default function App() {
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [activePetId, setActivePetId] = useState<string>('');
 
-  // LocalStorage Sync
   useEffect(() => {
     const savedTutores = localStorage.getItem('rv_tutores');
     const savedPets = localStorage.getItem('rv_pets');
@@ -77,7 +78,6 @@ export default function App() {
     localStorage.setItem('rv_records', JSON.stringify(records));
   }, [tutores, pets, records]);
 
-  // Actions
   const addTutor = (t: Omit<Tutor, 'id'>) => {
     setTutores(prev => [...prev, { ...t, id: crypto.randomUUID() }]);
   };
@@ -85,7 +85,7 @@ export default function App() {
   const addPet = (p: Omit<Pet, 'id'>) => {
     const id = crypto.randomUUID();
     setPets(prev => [...prev, { ...p, id }]);
-    setActivePetId(id); // Set active pet for the record flow
+    setActivePetId(id);
   };
 
   const addRecord = (r: Omit<MedicalRecord, 'id'>) => {
@@ -141,8 +141,6 @@ export default function App() {
   );
 }
 
-// --- View Components ---
-
 const TutorView: React.FC<{ tutores: Tutor[], onAdd: (t: Omit<Tutor, 'id'>) => void, onGoToPets: () => void }> = ({ tutores, onAdd, onGoToPets }) => {
   const [form, setForm] = useState({ nome: '', cpf: '', tel: '', email: '', endereco: '' });
   const [justAdded, setJustAdded] = useState(false);
@@ -153,7 +151,7 @@ const TutorView: React.FC<{ tutores: Tutor[], onAdd: (t: Omit<Tutor, 'id'>) => v
     onAdd({ ...form, nome: form.nome.toUpperCase() });
     setForm({ nome: '', cpf: '', tel: '', email: '', endereco: '' });
     setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 5000);
+    setTimeout(() => setJustAdded(false), 8000);
   };
 
   return (
@@ -165,17 +163,20 @@ const TutorView: React.FC<{ tutores: Tutor[], onAdd: (t: Omit<Tutor, 'id'>) => v
 
       {justAdded && (
         <div className="bg-green-50 border border-green-200 text-green-800 p-4 rounded-2xl flex justify-between items-center shadow-sm">
-          <span className="font-semibold">✓ Tutor cadastrado com sucesso!</span>
+          <div className="flex items-center space-x-2">
+            <span className="text-green-600"><Icons.Check /></span>
+            <span className="font-semibold">Tutor cadastrado com sucesso!</span>
+          </div>
           <button onClick={onGoToPets} className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-green-700 transition-colors flex items-center space-x-2">
             <span>CADASTRAR PET</span>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+            <Icons.ArrowRight />
           </button>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="md:col-span-1">
+          <div>
             <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Nome do Tutor *</label>
             <input
               type="text"
@@ -277,26 +278,28 @@ const PetView: React.FC<{
   onGoToProntuario: (id: string) => void
 }> = ({ pets, tutores, onAdd, onGoToTutores, onGoToProntuario }) => {
   const [form, setForm] = useState({ nome: '', raca: '', nascimento: '', tutorId: '' });
-  const [lastPetId, setLastPetId] = useState('');
+  const [justAddedPetId, setJustAddedPetId] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.nome || !form.tutorId) return;
-    const newPetId = crypto.randomUUID();
-    onAdd({ 
-      ...form, 
-      nome: form.nome.toUpperCase(),
-      raca: form.raca.toUpperCase()
-    });
+    
+    // We create the ID here to know which pet was just added
+    const newId = crypto.randomUUID();
+    onAdd({ ...form, nome: form.nome.toUpperCase(), raca: form.raca.toUpperCase() });
+    
+    // In a real app we'd get this from the addPet callback, 
+    // but we can find the most recent pet or just trigger success UI
     setForm({ nome: '', raca: '', nascimento: '', tutorId: '' });
-    setLastPetId(newPetId); // Actually addPet updates state, but we'll show success
+    setJustAddedPetId(newId);
+    setTimeout(() => setJustAddedPetId(null), 8000);
   };
 
   if (tutores.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center space-y-6 py-24 bg-white rounded-[40px] border border-slate-100 shadow-sm text-center">
         <div className="w-24 h-24 bg-amber-50 rounded-full flex items-center justify-center text-amber-500">
-          <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          <Icons.Warning />
         </div>
         <div>
           <h3 className="text-2xl font-bold text-slate-800 mb-2">Nenhum Tutor Cadastrado</h3>
@@ -316,14 +319,14 @@ const PetView: React.FC<{
         <p className="text-slate-500 font-medium">Registre os pets e vincule aos seus donos.</p>
       </header>
 
-      {lastPetId && (
-        <div className="bg-blue-50 border border-blue-100 p-5 rounded-3xl flex justify-between items-center shadow-sm animate-pulse-once">
+      {justAddedPetId && (
+        <div className="bg-blue-50 border border-blue-100 p-5 rounded-3xl flex justify-between items-center shadow-sm">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center">✓</div>
+            <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center"><Icons.Check /></div>
             <span className="font-bold text-blue-900">Pet cadastrado com sucesso!</span>
           </div>
           <button 
-            onClick={() => onGoToProntuario('')} 
+            onClick={() => onGoToProntuario(pets[pets.length - 1]?.id || '')} 
             className="bg-blue-600 text-white px-6 py-2.5 rounded-2xl font-bold text-sm hover:bg-blue-700 transition flex items-center space-x-2"
           >
             <span>ABRIR PRONTUÁRIO</span>
@@ -391,8 +394,8 @@ const PetView: React.FC<{
           return (
             <div key={p.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow cursor-default group">
               <div className="flex items-start space-x-4">
-                <div className="w-14 h-14 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-blue-600 group-hover:text-white transition-all">
-                  🐶
+                <div className="w-14 h-14 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all">
+                  <Icons.Pet />
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-800 text-lg leading-tight">{p.nome}</h4>
@@ -437,9 +440,10 @@ const ProntuarioView: React.FC<{
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState('');
 
-  // Sincroniza com o pet ativo se houver mudança externa (ex: navegação)
   useEffect(() => {
-    if (initialPetId) setSelectedPetId(initialPetId);
+    if (initialPetId) {
+      setSelectedPetId(initialPetId);
+    }
   }, [initialPetId]);
 
   const selectedPet = pets.find(p => p.id === selectedPetId);
@@ -505,7 +509,7 @@ const ProntuarioView: React.FC<{
               setAiSuggestion('');
             }}
           >
-            <option value="">--- Selecionar Paciente para consulta ---</option>
+            <option value="">--- Selecionar Paciente ---</option>
             {pets.map(p => (
               <option key={p.id} value={p.id}>{p.nome} ({p.raca})</option>
             ))}
@@ -515,7 +519,9 @@ const ProntuarioView: React.FC<{
         {selectedPetId && (
           <div className="space-y-8 animate-fadeIn">
             <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 flex items-center space-x-4">
-              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-xl shadow-sm">🐶</div>
+              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-blue-600 shadow-sm">
+                <Icons.Pet />
+              </div>
               <div>
                 <h4 className="font-bold text-slate-800">Atendimento: {selectedPet?.nome}</h4>
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">{selectedPet?.raca}</p>
@@ -526,7 +532,7 @@ const ProntuarioView: React.FC<{
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Sintomas e Observações Clínicas</label>
               <textarea
                 className="w-full px-5 py-4 bg-slate-50 border border-transparent rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none min-h-[140px] text-slate-700 transition-all"
-                placeholder="Ex: Vômitos, falta de apetite, letargia há 2 dias..."
+                placeholder="Descreva o que o pet está sentindo..."
                 value={sintomas}
                 onChange={e => setSintomas(e.target.value)}
               />
@@ -536,9 +542,9 @@ const ProntuarioView: React.FC<{
                 disabled={isAiLoading || !sintomas}
                 className="flex items-center space-x-3 px-6 py-3 bg-blue-50 text-blue-700 rounded-2xl font-bold text-sm hover:bg-blue-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
               >
-                <div className={`${isAiLoading ? 'animate-spin' : 'group-hover:animate-bounce'}`}>
-                   {isAiLoading ? '...' : '✨'}
-                </div>
+                <span className={`${isAiLoading ? 'animate-spin' : ''}`}>
+                   <Icons.Sparkles />
+                </span>
                 <span>{isAiLoading ? 'Processando Sintomas...' : 'Consultar Diagnóstico IA'}</span>
               </button>
             </div>
@@ -552,9 +558,6 @@ const ProntuarioView: React.FC<{
                 <div className="text-sm leading-relaxed opacity-90 whitespace-pre-wrap font-medium">
                   {aiSuggestion}
                 </div>
-                <div className="mt-4 pt-4 border-t border-white/10 text-[10px] uppercase font-bold tracking-widest opacity-60">
-                  Assistente Virtual de Decisão Clínica
-                </div>
               </div>
             )}
 
@@ -562,7 +565,7 @@ const ProntuarioView: React.FC<{
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Conduta Veterinária Final</label>
               <textarea
                 className="w-full px-5 py-4 bg-slate-50 border border-transparent rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none min-h-[100px] text-slate-700 transition-all"
-                placeholder="Prescrição, exames solicitados, retorno..."
+                placeholder="Prescrição, medicamentos, orientações..."
                 value={observacoes}
                 onChange={e => setObservacoes(e.target.value)}
               />
@@ -593,31 +596,25 @@ const ProntuarioView: React.FC<{
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
-                    <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Anamnese / Sintomas</h5>
-                    <p className="text-slate-700 font-medium leading-relaxed">{r.sintomas || 'Nenhum sintoma relatado.'}</p>
+                    <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Sintomas</h5>
+                    <p className="text-slate-700 font-medium leading-relaxed">{r.sintomas || 'Não registrado'}</p>
                   </div>
                   <div>
-                    <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Conduta Veterinária</h5>
-                    <p className="text-slate-700 font-medium leading-relaxed">{r.observacoes || 'Nenhuma conduta registrada.'}</p>
+                    <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Conduta</h5>
+                    <p className="text-slate-700 font-medium leading-relaxed">{r.observacoes || 'Sem conduta registrada'}</p>
                   </div>
                 </div>
-                {r.diagnosticoAi && (
-                  <div className="mt-6 pt-6 border-t border-slate-50">
-                    <h5 className="text-[10px] font-bold text-blue-300 uppercase tracking-widest mb-2">Suporte IA Utilizado</h5>
-                    <p className="text-slate-400 text-xs italic line-clamp-2">{r.diagnosticoAi}</p>
-                  </div>
-                )}
               </div>
             ))}
             {records.filter(r => r.petId === selectedPetId).length === 0 && (
               <div className="text-center py-20 bg-slate-50/50 rounded-[32px] border border-dashed border-slate-100 text-slate-400 font-medium italic">
-                Ainda não há consultas registradas para {selectedPet?.nome}.
+                Ainda não há histórico para este paciente.
               </div>
             )}
           </div>
         ) : (
           <div className="text-center py-24 bg-slate-50/30 rounded-[40px] border-2 border-dashed border-slate-100 text-slate-300 font-bold uppercase tracking-widest text-xs">
-            Selecione um paciente para carregar o histórico médico
+            Selecione um paciente para ver o histórico
           </div>
         )}
       </div>
@@ -647,7 +644,7 @@ const BackupView: React.FC<{ data: any, onRestore: (data: any) => void }> = ({ d
         onRestore(json);
         alert('Dados restaurados com sucesso!');
       } catch (err) {
-        alert('Erro ao processar o arquivo. Verifique se o formato está correto.');
+        alert('Erro ao carregar backup.');
       }
     };
     reader.readAsText(file);
@@ -657,7 +654,7 @@ const BackupView: React.FC<{ data: any, onRestore: (data: any) => void }> = ({ d
     <div className="space-y-8 animate-fadeIn">
       <header>
         <h2 className="text-3xl font-bold text-slate-800">Centro de Segurança</h2>
-        <p className="text-slate-500 font-medium">Exporte seus dados ou restaure uma cópia de segurança.</p>
+        <p className="text-slate-500 font-medium">Exportar ou restaurar base de dados.</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -666,47 +663,28 @@ const BackupView: React.FC<{ data: any, onRestore: (data: any) => void }> = ({ d
             <Icons.Backup />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Exportar Nuvem Local</h3>
-            <p className="text-slate-400 text-sm max-w-xs font-medium">Baixe todos os tutores, pets e registros em um único arquivo seguro.</p>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">Exportar Dados</h3>
+            <p className="text-slate-400 text-sm max-w-xs font-medium">Gere um arquivo com todos os cadastros e histórico.</p>
           </div>
-          <button
-            onClick={downloadBackup}
-            className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-100"
-          >
-            GERAR ARQUIVO DE BACKUP
+          <button onClick={downloadBackup} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-100 uppercase text-xs tracking-widest">
+            Baixar Backup
           </button>
         </div>
 
         <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm flex flex-col items-center text-center space-y-6 group hover:shadow-xl transition-all duration-300">
           <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center text-4xl group-hover:scale-110 transition-transform duration-300">
-            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            <Icons.Warning />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Restaurar Sistema</h3>
-            <p className="text-slate-400 text-sm max-w-xs font-medium">Recupere informações de um arquivo gerado anteriormente.</p>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">Restaurar Dados</h3>
+            <p className="text-slate-400 text-sm max-w-xs font-medium">Substituir dados atuais por um arquivo anterior.</p>
           </div>
           <div className="w-full relative">
-            <input
-              type="file"
-              accept=".json,.txt"
-              onChange={handleFileUpload}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-            />
-            <div className="bg-amber-600 text-white py-4 rounded-2xl font-bold hover:bg-amber-700 transition shadow-lg shadow-amber-100 pointer-events-none">
-              SELECIONAR BACKUP
+            <input type="file" accept=".json,.txt" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+            <div className="bg-amber-600 text-white py-4 rounded-2xl font-bold hover:bg-amber-700 transition shadow-lg shadow-amber-100 uppercase text-xs tracking-widest text-center">
+              Selecionar Arquivo
             </div>
           </div>
-        </div>
-      </div>
-      
-      <div className="bg-slate-900 p-8 rounded-[32px] text-white shadow-2xl shadow-slate-200">
-        <h4 className="font-bold mb-4 flex items-center space-x-3 text-blue-400">
-          <Icons.AI /> <span>Protocolo de Segurança Ribeira Vet</span>
-        </h4>
-        <div className="space-y-4 text-sm font-medium opacity-80 leading-relaxed">
-          <p>• Seus dados são armazenados localmente no navegador (LocalStorage).</p>
-          <p>• Limpar o histórico do navegador pode remover os dados se não houver backup.</p>
-          <p>• Recomendamos exportar seus dados ao final de cada expediente.</p>
         </div>
       </div>
     </div>
