@@ -49,9 +49,88 @@ const Sidebar: React.FC<{ currentTab: AppTab; setTab: (tab: AppTab) => void }> =
         ))}
       </nav>
       <div className="p-4 border-t text-[10px] text-slate-400 text-center uppercase tracking-widest font-bold">
-        v3.0 Continuous Voice
+        v3.1 Pro Voice AI
       </div>
     </div>
+  );
+};
+
+// --- Voice Input Component (Enhanced Continuous Mode) ---
+const VoiceButton: React.FC<{ onResult: (text: string) => void }> = ({ onResult }) => {
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const shouldRestartRef = useRef(false);
+
+  const initRecognition = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return null;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.continuous = true;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      shouldRestartRef.current = true;
+    };
+
+    recognition.onend = () => {
+      // Se o sistema desligar sozinho por silêncio mas o estado "shouldRestart" for true, religamos.
+      if (shouldRestartRef.current) {
+        recognition.start();
+      } else {
+        setIsListening(false);
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Erro voz:", event.error);
+      if (event.error === 'no-speech') return; // Ignora se for apenas silêncio
+      shouldRestartRef.current = false;
+      setIsListening(false);
+    };
+
+    recognition.onresult = (event: any) => {
+      const lastIndex = event.results.length - 1;
+      const transcript = event.results[lastIndex][0].transcript;
+      if (event.results[lastIndex].isFinal) {
+        onResult(transcript);
+      }
+    };
+
+    return recognition;
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      shouldRestartRef.current = false;
+      if (recognitionRef.current) recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      const rec = initRecognition();
+      if (rec) {
+        recognitionRef.current = rec;
+        rec.start();
+      } else {
+        alert("Reconhecimento de voz não suportado neste navegador.");
+      }
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggleListening}
+      className={`p-2 rounded-full transition-all flex items-center space-x-2 px-3 ${
+        isListening 
+        ? 'bg-red-600 text-white shadow-lg ring-4 ring-red-100 animate-pulse' 
+        : 'bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-600'
+      }`}
+    >
+      <Icons.Mic />
+      {isListening && <span className="text-[10px] font-bold uppercase">Gravando...</span>}
+    </button>
   );
 };
 
@@ -77,157 +156,54 @@ export default function App() {
     localStorage.setItem("rv_records", JSON.stringify(records));
   }, [tutores, pets, records]);
 
-  const addTutor = (t: Omit<Tutor, "id">) => {
-    setTutores(prev => [...prev, { ...t, id: crypto.randomUUID() }]);
-  };
-
-  const addPet = (p: Pet) => {
-    setPets(prev => [...prev, p]);
-    setActivePetId(p.id);
-  };
-
-  const addRecord = (r: Omit<MedicalRecord, "id">) => {
-    setRecords(prev => [...prev, { ...r, id: crypto.randomUUID() }]);
-  };
-
+  const addTutor = (t: Omit<Tutor, "id">) => setTutores(prev => [...prev, { ...t, id: crypto.randomUUID() }]);
+  const addPet = (p: Pet) => { setPets(prev => [...prev, p]); setActivePetId(p.id); };
+  const addRecord = (r: Omit<MedicalRecord, "id">) => setRecords(prev => [...prev, { ...r, id: crypto.randomUUID() }]);
   const restoreBackup = (data: any) => {
-    if (data.tutores) setTutores(data.tutores);
-    if (data.pets) setPets(data.pets);
-    if (data.records) setRecords(data.records || data.historico || []);
-  };
-
-  const navigateToProntuario = (petId: string) => {
-    setActivePetId(petId);
-    setCurrentTab(AppTab.PRONTUARIO);
+    setTutores(data.tutores || []);
+    setPets(data.pets || []);
+    setRecords(data.records || data.historico || []);
   };
 
   return (
     <div className="flex min-h-screen">
       <Sidebar currentTab={currentTab} setTab={setCurrentTab} />
       <main className="flex-1 ml-64 p-8 max-w-5xl mx-auto w-full">
-        {currentTab === AppTab.TUTORES && (
-          <TutorView tutores={tutores} onAdd={addTutor} onGoToPets={() => setCurrentTab(AppTab.PETS)} />
-        )}
-        {currentTab === AppTab.PETS && (
-          <PetView pets={pets} tutores={tutores} onAdd={addPet} onGoToTutores={() => setCurrentTab(AppTab.TUTORES)} onGoToProntuario={navigateToProntuario} />
-        )}
-        {currentTab === AppTab.PRONTUARIO && (
-          <ProntuarioView pets={pets} records={records} onAdd={addRecord} onGoToPets={() => setCurrentTab(AppTab.PETS)} selectedId={activePetId} onSelect={setActivePetId} />
-        )}
-        {currentTab === AppTab.BACKUP && (
-          <BackupView data={{ tutores, pets, records }} onRestore={restoreBackup} />
-        )}
+        {currentTab === AppTab.TUTORES && <TutorView tutores={tutores} onAdd={addTutor} onGoToPets={() => setCurrentTab(AppTab.PETS)} />}
+        {currentTab === AppTab.PETS && <PetView pets={pets} tutores={tutores} onAdd={addPet} onGoToTutores={() => setCurrentTab(AppTab.TUTORES)} onGoToProntuario={(id) => { setActivePetId(id); setCurrentTab(AppTab.PRONTUARIO); }} />}
+        {currentTab === AppTab.PRONTUARIO && <ProntuarioView pets={pets} records={records} onAdd={addRecord} onGoToPets={() => setCurrentTab(AppTab.PETS)} selectedId={activePetId} onSelect={setActivePetId} />}
+        {currentTab === AppTab.BACKUP && <BackupView data={{ tutores, pets, records }} onRestore={restoreBackup} />}
       </main>
     </div>
   );
 }
 
-// --- Voice Input Component (Updated for Continuous Mode) ---
-const VoiceButton: React.FC<{ onResult: (text: string) => void }> = ({ onResult }) => {
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<any>(null);
-  
-  const toggleListening = () => {
-    if (isListening) {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      setIsListening(false);
-      return;
-    }
+// --- Views ---
 
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Seu navegador nao suporta reconhecimento de voz.");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'pt-BR';
-    recognition.continuous = true; // Stay on even after pauses
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = () => setIsListening(true);
-    recognition.onend = () => setIsListening(false);
-    recognition.onerror = (event: any) => {
-      console.error("Erro reconhecimento:", event.error);
-      setIsListening(false);
-    };
-    
-    recognition.onresult = (event: any) => {
-      // Get the latest result
-      const lastIndex = event.results.length - 1;
-      const transcript = event.results[lastIndex][0].transcript;
-      
-      // Only handle final results
-      if (event.results[lastIndex].isFinal) {
-        onResult(transcript);
-      }
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={toggleListening}
-      className={`p-2 rounded-full transition-all flex items-center space-x-2 px-3 ${
-        isListening 
-        ? 'bg-red-500 text-white shadow-lg shadow-red-200 ring-4 ring-red-100 animate-pulse' 
-        : 'bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-600'
-      }`}
-      title={isListening ? "Parar Gravacao" : "Iniciar Gravacao Continua"}
-    >
-      <Icons.Mic />
-      {isListening && <span className="text-[10px] font-bold uppercase tracking-widest">Ouvindo...</span>}
-    </button>
-  );
-};
-
-// --- View Components ---
 const TutorView: React.FC<{ tutores: Tutor[], onAdd: (t: Omit<Tutor, "id">) => void, onGoToPets: () => void }> = ({ tutores, onAdd, onGoToPets }) => {
   const [form, setForm] = useState({ nome: "", cpf: "", tel: "", email: "", endereco: "" });
-  const [justAdded, setJustAdded] = useState(false);
+  const [added, setAdded] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const sub = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nome || !form.cpf) return;
     onAdd({ ...form, nome: form.nome.toUpperCase() });
     setForm({ nome: "", cpf: "", tel: "", email: "", endereco: "" });
-    setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 8000);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 5000);
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      <header>
-        <h2 className="text-3xl font-bold text-slate-800">Cadastro de Tutores</h2>
-        <p className="text-slate-500 font-medium">Gerencie os proprietarios dos pacientes.</p>
-      </header>
-      {justAdded && (
-        <div className="bg-green-50 border border-green-200 text-green-800 p-4 rounded-2xl flex justify-between items-center shadow-sm">
-          <div className="flex items-center space-x-2">
-            <span className="text-green-600"><Icons.Check /></span>
-            <span className="font-semibold">Tutor salvo. Vamos cadastrar o Pet?</span>
-          </div>
-          <button onClick={onGoToPets} className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-green-700 transition-colors flex items-center space-x-2">
-            <span>CADASTRAR PET</span>
-            <Icons.ArrowRight />
-          </button>
+    <div className="space-y-8">
+      <header><h2 className="text-3xl font-bold">Tutores</h2><p className="text-slate-500">Cadastre o proprietário antes do pet.</p></header>
+      {added && <div className="bg-green-50 p-4 rounded-xl flex justify-between items-center border border-green-200"><span>Tutor salvo com sucesso!</span><button onClick={onGoToPets} className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold">CADASTRAR PET</button></div>}
+      <form onSubmit={sub} className="bg-white p-8 rounded-3xl shadow-sm border space-y-4">
+        <input placeholder="NOME DO TUTOR *" required className="w-full p-4 bg-slate-50 rounded-xl" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} />
+        <input placeholder="CPF *" required className="w-full p-4 bg-slate-50 rounded-xl" value={form.cpf} onChange={e => setForm({...form, cpf: e.target.value})} />
+        <div className="grid grid-cols-2 gap-4">
+          <input placeholder="WhatsApp" className="p-4 bg-slate-50 rounded-xl" value={form.tel} onChange={e => setForm({...form, tel: e.target.value})} />
+          <input placeholder="E-mail" className="p-4 bg-slate-50 rounded-xl" value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
         </div>
-      )}
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Nome do Tutor *</label><input type="text" required className="w-full px-4 py-3 bg-slate-50 border rounded-xl focus:bg-white outline-none" value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} placeholder="EX: JOAO DA SILVA" /></div>
-          <div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">CPF *</label><input type="text" required className="w-full px-4 py-3 bg-slate-50 border rounded-xl focus:bg-white outline-none" value={form.cpf} onChange={e => setForm({ ...form, cpf: e.target.value })} placeholder="000.000.000-00" /></div>
-          <div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">WhatsApp</label><input type="text" className="w-full px-4 py-3 bg-slate-50 border rounded-xl focus:bg-white outline-none" value={form.tel} onChange={e => setForm({ ...form, tel: e.target.value })} placeholder="(00) 00000-0000" /></div>
-          <div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">E-mail</label><input type="email" className="w-full px-4 py-3 bg-slate-50 border rounded-xl focus:bg-white outline-none" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="email@exemplo.com" /></div>
-          <div className="md:col-span-2"><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Endereco</label><input type="text" className="w-full px-4 py-3 bg-slate-50 border rounded-xl focus:bg-white outline-none" value={form.endereco} onChange={e => setForm({ ...form, endereco: e.target.value })} placeholder="Rua, numero, bairro..." /></div>
-        </div>
-        <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition shadow-xl"><span>SALVAR TUTOR</span></button>
+        <button className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg">SALVAR TUTOR</button>
       </form>
     </div>
   );
@@ -235,133 +211,116 @@ const TutorView: React.FC<{ tutores: Tutor[], onAdd: (t: Omit<Tutor, "id">) => v
 
 const PetView: React.FC<{ pets: Pet[], tutores: Tutor[], onAdd: (p: Pet) => void, onGoToTutores: () => void, onGoToProntuario: (id: string) => void }> = ({ pets, tutores, onAdd, onGoToTutores, onGoToProntuario }) => {
   const [form, setForm] = useState({ nome: "", raca: "", nascimento: "", tutorId: "" });
-  const [newPetId, setNewPetId] = useState<string | null>(null);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.nome || !form.tutorId) return;
-    const generatedId = crypto.randomUUID();
-    onAdd({ ...form, id: generatedId, nome: form.nome.toUpperCase(), raca: form.raca.toUpperCase() });
-    setForm({ nome: "", raca: "", nascimento: "", tutorId: "" });
-    setNewPetId(generatedId);
-  };
-
-  if (tutores.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center space-y-6 py-24 bg-white rounded-3xl border text-center">
-        <Icons.Warning /><h3 className="text-xl font-bold">Nenhum Tutor Cadastrado</h3><button onClick={onGoToTutores} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold">CADASTRAR TUTOR AGORA</button>
-      </div>
-    );
-  }
+  
+  if (tutores.length === 0) return <div className="p-12 text-center bg-white rounded-3xl border"><h3>Cadastre um Tutor primeiro.</h3><button onClick={onGoToTutores} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg">Ir para Tutores</button></div>;
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      <header><h2 className="text-3xl font-bold text-slate-800">Cadastro de Pacientes</h2><p className="text-slate-500 font-medium">Registre os pets e vincule aos proprietarios.</p></header>
-      {newPetId && (
-        <div className="bg-blue-50 border border-blue-100 p-5 rounded-3xl flex justify-between items-center shadow-sm animate-fadeIn">
-          <div className="flex items-center space-x-3 text-blue-900 font-bold"><span className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center"><Icons.Check /></span><span>Paciente salvo. Abrir prontuario agora?</span></div>
-          <button onClick={() => onGoToProntuario(newPetId)} className="bg-blue-600 text-white px-6 py-2.5 rounded-2xl font-bold hover:bg-blue-700 flex items-center space-x-2"><span>ABRIR PRONTUARIO</span><Icons.Record /></button>
+    <div className="space-y-8">
+      <header><h2 className="text-3xl font-bold">Pacientes</h2></header>
+      <form onSubmit={(e) => { e.preventDefault(); onAdd({...form, id: crypto.randomUUID()}); setForm({nome:"", raca:"", nascimento:"", tutorId:""}); }} className="bg-white p-8 rounded-3xl border space-y-4 shadow-sm">
+        <select required className="w-full p-4 bg-slate-50 rounded-xl" value={form.tutorId} onChange={e => setForm({...form, tutorId: e.target.value})}>
+          <option value="">--- Selecionar Tutor ---</option>
+          {tutores.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+        </select>
+        <div className="grid grid-cols-2 gap-4">
+          <input placeholder="Nome do Pet" required className="p-4 bg-slate-50 rounded-xl" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} />
+          <input placeholder="Raça" className="p-4 bg-slate-50 rounded-xl" value={form.raca} onChange={e => setForm({...form, raca: e.target.value})} />
         </div>
-      )}
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="md:col-span-2"><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Selecione o Tutor *</label><select required className="w-full px-4 py-3 bg-slate-50 border rounded-xl focus:bg-white outline-none cursor-pointer" value={form.tutorId} onChange={e => setForm({ ...form, tutorId: e.target.value })}><option value="">--- Selecionar proprietario ---</option>{tutores.map(t => (<option key={t.id} value={t.id}>{t.nome} (CPF: {t.cpf})</option>))}</select></div>
-          <div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Nome do Pet *</label><input type="text" required className="w-full px-4 py-3 bg-slate-50 border rounded-xl focus:bg-white outline-none" value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} placeholder="EX: LUNA" /></div>
-          <div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Raca</label><input type="text" className="w-full px-4 py-3 bg-slate-50 border rounded-xl focus:bg-white outline-none" value={form.raca} onChange={e => setForm({ ...form, raca: e.target.value })} placeholder="EX: BORDER COLLIE" /></div>
-          <div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Nascimento</label><input type="text" className="w-full px-4 py-3 bg-slate-50 border rounded-xl focus:bg-white outline-none" value={form.nascimento} onChange={e => setForm({ ...form, nascimento: e.target.value })} placeholder="DD/MM/AAAA" /></div>
-        </div>
-        <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-50">SALVAR PACIENTE</button>
+        <button className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold">SALVAR PET</button>
       </form>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{pets.map(p => (<div key={p.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between group hover:shadow-md transition-all"><div className="flex items-start space-x-4"><div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all"><Icons.Pet /></div><div><h4 className="font-bold text-slate-800">{p.nome}</h4><p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{p.raca || "N/A"}</p></div></div><div className="mt-4 flex justify-between items-center pt-4 border-t border-slate-50"><div className="text-xs text-slate-600 font-medium">{tutores.find(t => t.id === p.tutorId)?.nome}</div><button onClick={() => onGoToProntuario(p.id)} className="text-blue-600 hover:text-blue-800"><Icons.Record /></button></div></div>))}</div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {pets.map(p => (
+          <div key={p.id} className="bg-white p-6 rounded-3xl border hover:shadow-md transition-all flex justify-between items-center">
+            <div><h4 className="font-bold">{p.nome}</h4><p className="text-xs text-slate-400">{p.raca}</p></div>
+            <button onClick={() => onGoToProntuario(p.id)} className="text-blue-600"><Icons.Record /></button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
 
 const ProntuarioView: React.FC<{ pets: Pet[], records: MedicalRecord[], onAdd: (r: Omit<MedicalRecord, "id">) => void, onGoToPets: () => void, selectedId: string, onSelect: (id: string) => void }> = ({ pets, records, onAdd, onGoToPets, selectedId, onSelect }) => {
-  const [sintomas, setSintomas] = useState("");
-  const [observacoes, setObservacoes] = useState("");
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState("");
+  const [sin, setSin] = useState("");
+  const [obs, setObs] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [ai, setAi] = useState("");
 
   const selectedPet = pets.find(p => p.id === selectedId);
 
-  const handleAiConsult = async () => {
-    if (!sintomas || !selectedPet) return;
-    setIsAiLoading(true);
-    const suggestion = await getAiDiagnosisSuggestion(sintomas, { nome: selectedPet.nome, raca: selectedPet.raca });
-    setAiSuggestion(suggestion || "");
-    setIsAiLoading(false);
+  const askAi = async () => {
+    if (!sin || !selectedPet) return;
+    setLoading(true);
+    const res = await getAiDiagnosisSuggestion(sin, { nome: selectedPet.nome, raca: selectedPet.raca });
+    setAi(res || "");
+    setLoading(false);
   };
 
-  const handleVoiceResult = (field: 'sintomas' | 'observacoes', text: string) => {
-    if (field === 'sintomas') {
-      setSintomas(prev => prev ? `${prev} ${text}` : text);
-    } else {
-      setObservacoes(prev => prev ? `${prev} ${text}` : text);
-    }
+  const handleVoice = (field: 'sin' | 'obs', text: string) => {
+    if (field === 'sin') setSin(prev => prev ? `${prev} ${text}` : text);
+    else setObs(prev => prev ? `${prev} ${text}` : text);
   };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedId) return;
-    onAdd({ petId: selectedId, data: new Date().toLocaleDateString("pt-BR"), observacoes, sintomas, diagnosticoAi: aiSuggestion });
-    setSintomas(""); setObservacoes(""); setAiSuggestion("");
-    alert("Consulta registrada!");
-  };
-
-  if (pets.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center space-y-6 py-24 bg-white rounded-3xl border text-center">
-        <Icons.Record /><h3 className="text-xl font-bold">Sem Pacientes Cadastrados</h3><button onClick={onGoToPets} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg">CADASTRAR PET AGORA</button>
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-8 animate-fadeIn pb-24">
-      <header><h2 className="text-3xl font-bold text-slate-800">Prontuario Medico</h2><p className="text-slate-500 font-medium">Historico de consultas e IA veterinaria.</p></header>
-      <div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 space-y-8">
-        <div><label className="block text-xs font-bold text-slate-400 uppercase mb-3">Paciente Ativo</label><select className="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none text-lg font-bold text-slate-700 cursor-pointer" value={selectedId} onChange={e => { onSelect(e.target.value); setAiSuggestion(""); }}><option value="">--- Selecionar Paciente ---</option>{pets.map(p => (<option key={p.id} value={p.id}>{p.nome} ({p.raca})</option>))}</select></div>
+    <div className="space-y-8 pb-24">
+      <header><h2 className="text-3xl font-bold text-slate-800">Prontuário</h2></header>
+      <div className="bg-white p-8 rounded-[32px] border shadow-sm space-y-6">
+        <select className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-lg" value={selectedId} onChange={e => { onSelect(e.target.value); setAi(""); }}>
+          <option value="">--- Selecionar Paciente ---</option>
+          {pets.map(p => <option key={p.id} value={p.id}>{p.nome} ({p.raca})</option>)}
+        </select>
+
         {selectedId && (
-          <div className="space-y-8 animate-fadeIn">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center"><label className="block text-xs font-bold text-slate-400 uppercase">Sintomas (Gravacao Continua Ativada)</label><VoiceButton onResult={(text) => handleVoiceResult('sintomas', text)} /></div>
-              <textarea className="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none min-h-[120px]" placeholder="Dite ou escreva os sintomas..." value={sintomas} onChange={e => setSintomas(e.target.value)} />
-              <button type="button" onClick={handleAiConsult} disabled={isAiLoading || !sintomas} className="flex items-center space-x-3 px-6 py-3 bg-blue-50 text-blue-700 rounded-2xl font-bold hover:bg-blue-100 transition-all disabled:opacity-50"><span className={isAiLoading ? "animate-spin" : ""}><Icons.Sparkles /></span><span>{isAiLoading ? "Analisando..." : "Consultar Diagnostico IA"}</span></button>
+          <div className="space-y-6">
+            <div>
+              <div className="flex justify-between items-center mb-2"><label className="text-xs font-bold text-slate-400 uppercase">Sintomas / Anamnese</label><VoiceButton onResult={(t) => handleVoice('sin', t)} /></div>
+              <textarea className="w-full p-5 bg-slate-50 rounded-2xl min-h-[120px]" placeholder="Relate o que o pet apresenta..." value={sin} onChange={e => setSin(e.target.value)} />
+              <button onClick={askAi} disabled={loading || !sin} className="mt-3 flex items-center space-x-2 bg-blue-50 text-blue-700 px-6 py-2 rounded-xl font-bold">
+                <Icons.Sparkles /> <span>{loading ? "Processando..." : "Consultar Inteligência Artificial"}</span>
+              </button>
             </div>
-            {aiSuggestion && (<div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-3xl text-white shadow-xl animate-slideUp"><div className="flex items-center space-x-2 mb-4"><Icons.AI /> <h4 className="font-bold">Analise Pro IA</h4></div><div className="text-sm whitespace-pre-wrap opacity-95 leading-relaxed">{aiSuggestion}</div></div>)}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center"><label className="block text-xs font-bold text-slate-400 uppercase">Conduta Veterinaria</label><VoiceButton onResult={(text) => handleVoiceResult('observacoes', text)} /></div>
-              <textarea className="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none min-h-[100px]" placeholder="Dite a conduta e medicamentos..." value={observacoes} onChange={e => setObservacoes(e.target.value)} />
+
+            {ai && <div className="bg-blue-600 p-6 rounded-3xl text-white text-sm shadow-xl whitespace-pre-wrap leading-relaxed"><div className="flex items-center space-x-2 mb-2 font-bold"><Icons.AI /><span>Sugestão Clínica Pro AI</span></div>{ai}</div>}
+
+            <div>
+              <div className="flex justify-between items-center mb-2"><label className="text-xs font-bold text-slate-400 uppercase">Conduta / Receituário</label><VoiceButton onResult={(t) => handleVoice('obs', t)} /></div>
+              <textarea className="w-full p-5 bg-slate-50 rounded-2xl min-h-[100px]" placeholder="Prescrições e orientações..." value={obs} onChange={e => setObs(e.target.value)} />
             </div>
-            <button onClick={handleSubmit} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-bold uppercase text-sm hover:bg-black shadow-xl">Salvar Consulta</button>
+
+            <button onClick={() => { onAdd({ petId: selectedId, data: new Date().toLocaleDateString("pt-BR"), observacoes: obs, sintomas: sin, diagnosticoAi: ai }); setSin(""); setObs(""); setAi(""); alert("Salvo!"); }} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold uppercase shadow-xl">Finalizar Atendimento</button>
           </div>
         )}
       </div>
-      <div className="space-y-6"><h3 className="text-xl font-bold text-slate-800 px-2 flex items-center space-x-2"><Icons.Record /><span>Historico do Paciente</span></h3><div className="space-y-4">{records.filter(r => r.petId === selectedId).reverse().map(r => (<div key={r.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm"><div className="flex justify-between items-center mb-4"><span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold">{r.data}</span></div><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Anamnese</h5><p className="text-sm text-slate-700">{r.sintomas}</p></div><div><h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Conduta</h5><p className="text-sm text-slate-700">{r.observacoes}</p></div></div></div>))}</div></div>
+
+      <div className="space-y-4">
+        <h3 className="font-bold">Histórico do Paciente</h3>
+        {records.filter(r => r.petId === selectedId).reverse().map(r => (
+          <div key={r.id} className="bg-white p-6 rounded-3xl border">
+            <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded mb-2 inline-block">{r.data}</span>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div><p className="font-bold text-slate-400 uppercase text-[10px]">Anamnese</p><p>{r.sintomas}</p></div>
+              <div><p className="font-bold text-slate-400 uppercase text-[10px]">Conduta</p><p>{r.observacoes}</p></div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
 
-const BackupView: React.FC<{ data: any, onRestore: (data: any) => void }> = ({ data, onRestore }) => {
-  const downloadBackup = () => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "backup_ribeira_vet.json"; a.click(); URL.revokeObjectURL(url);
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return;
-    const reader = new FileReader(); reader.onload = (event) => {
-      try { onRestore(JSON.parse(event.target?.result as string)); alert("Dados restaurados!"); } catch (err) { alert("Erro no arquivo."); }
-    }; reader.readAsText(file);
-  };
-
-  return (
-    <div className="space-y-8 animate-fadeIn">
-      <header><h2 className="text-3xl font-bold text-slate-800">Seguranca e Backup</h2><p className="text-slate-500 font-medium">Exportar ou restaurar base de dados local.</p></header>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="bg-white p-10 rounded-[40px] border shadow-sm flex flex-col items-center space-y-6 group hover:shadow-lg transition-all"><div className="w-16 h-16 bg-green-50 text-green-500 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110"><Icons.Backup /></div><h3 className="text-xl font-bold text-slate-800">Exportar Base</h3><button onClick={downloadBackup} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold shadow-lg">GERAR BACKUP</button></div><div className="bg-white p-10 rounded-[40px] border shadow-sm flex flex-col items-center space-y-6 group hover:shadow-lg transition-all"><div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110"><Icons.Warning /></div><h3 className="text-xl font-bold text-slate-800">Restaurar Base</h3><div className="w-full relative"><input type="file" accept=".json" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" /><div className="bg-amber-600 text-white py-4 rounded-2xl font-bold text-center shadow-lg">SUBIR ARQUIVO</div></div></div></div>
+const BackupView: React.FC<{ data: any, onRestore: (d: any) => void }> = ({ data, onRestore }) => (
+  <div className="space-y-8">
+    <header><h2 className="text-3xl font-bold">Backup</h2></header>
+    <div className="grid grid-cols-2 gap-8">
+      <button onClick={() => { const blob = new Blob([JSON.stringify(data)], {type:"application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "ribeira_vet_data.json"; a.click(); }} className="bg-white p-12 rounded-[40px] border shadow-sm flex flex-col items-center space-y-4 group">
+        <div className="w-16 h-16 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition"><Icons.Backup /></div>
+        <span className="font-bold">Baixar Base de Dados</span>
+      </button>
+      <div className="relative bg-white p-12 rounded-[40px] border shadow-sm flex flex-col items-center space-y-4 group cursor-pointer">
+        <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { const f = e.target.files?.[0]; if(!f) return; const r = new FileReader(); r.onload=(ev) => { try { onRestore(JSON.parse(ev.target?.result as string)); alert("Restaurado!"); } catch { alert("Erro"); } }; r.readAsText(f); }} />
+        <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition"><Icons.Warning /></div>
+        <span className="font-bold">Restaurar do Arquivo</span>
+      </div>
     </div>
-  );
-};
+  </div>
+);
