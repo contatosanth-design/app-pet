@@ -7,183 +7,118 @@ import pandas as pd
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Ribeira Vet Pro v7.0", layout="wide", page_icon="🐾")
 
-# --- INICIALIZAÇÃO COMPLETA DO ESTADO ---
-chaves_sistema = [
-    'tutores', 'pets', 'records', 'estoque_servicos', 
-    'financeiro', 'exames', 'procedimentos', 'rascunho'
-]
+# --- INICIALIZAÇÃO DO ESTADO ---
+chaves_sistema = ['tutores', 'pets', 'records', 'estoque', 'financeiro']
 for chave in chaves_sistema:
     if chave not in st.session_state:
         st.session_state[chave] = []
 
+# --- LISTA DE RAÇAS COMUNS (Versão 2.0 Recuperada) ---
+RACAS_COMUNS = [
+    "SRD (Vira-lata)", "Shih Tzu", "Poodle", "Pinscher", "Golden Retriever", 
+    "Bulldog Francês", "Yorkshire", "Lhasa Apso", "Pit Bull", "Beagle",
+    "Persa", "Siamês", "Maine Coon", "Angorá", "Bengal", "Outra"
+]
+
 # --- FUNÇÕES DE APOIO ---
-def calcular_idade(nasc_str):
+def calcular_idade_seguro(nasc_str):
+    if not nasc_str: return "N/D"
     try:
-        # Tenta converter a string de data salva
         nasc = datetime.strptime(nasc_str, "%Y-%m-%d").date()
         hoje = date.today()
-        idade = hoje.year - nasc.year - ((hoje.month, hoje.day) < (nasc.month, nasc.day))
-        return f"{idade} anos"
-    except:
-        return "Idade não registrada"
+        return f"{hoje.year - nasc.year - ((hoje.month, hoje.day) < (nasc.month, nasc.day))} anos"
+    except: return "N/D"
 
-# --- SIDEBAR COMPLETA ---
+# --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("## 🐾 Ribeira Vet Pro")
-    menu = st.radio("Navegação", [
-        "Tutores", "Pacientes", "Prontuário", 
-        "Exames & Procedimentos", "Financeiro", 
-        "Estoque & Serviços", "Rascunho", "Dados & Backup"
-    ])
+    st.title("🐾 Ribeira Vet Pro")
+    menu = st.radio("Navegação", ["Tutores", "Pacientes", "Prontuário", "Financeiro", "Dados"])
     st.divider()
-    st.info("💡 **Dica de Voz:** Clique no campo e use **Win + H**")
-    st.success("Sistema v7.0 Estável 🟢")
+    st.success("Ditado de Voz Ativo (Win + H) 🟢")
 
 # --- 1. TUTORES (Com Endereço Completo) ---
 if menu == "Tutores":
     st.header("👤 Cadastro de Tutores")
     with st.form("f_tutor", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        nome = col1.text_input("NOME COMPLETO *").upper()
-        cpf = col2.text_input("CPF *")
-        zap = col1.text_input("WhatsApp (com DDD) *")
-        mail = col2.text_input("E-mail para Recibo")
-        endereco = st.text_input("ENDEREÇO COMPLETO") # Parâmetro recuperado
-        
+        c1, c2 = st.columns(2)
+        nome = c1.text_input("NOME COMPLETO *").upper()
+        cpf = c2.text_input("CPF *")
+        zap = c1.text_input("WhatsApp (DDD + Número) *")
+        end = st.text_input("ENDEREÇO COMPLETO")
         if st.form_submit_button("SALVAR TUTOR"):
             if nome and zap:
-                novo_tutor = {
-                    "id": str(uuid.uuid4()), "nome": nome, "cpf": cpf, 
-                    "zap": zap, "mail": mail, "endereco": endereco
-                }
-                st.session_state.tutores.append(novo_tutor)
-                st.success(f"Tutor {nome} cadastrado com sucesso!")
-            else:
-                st.error("Campos Nome e WhatsApp são obrigatórios.")
+                st.session_state.tutores.append({"id": str(uuid.uuid4()), "nome": nome, "zap": zap, "end": end})
+                st.success("Tutor cadastrado!")
 
-# --- 2. PACIENTES ---
+# --- 2. PACIENTES (Diferenciação por Raça e Idade) ---
 elif menu == "Pacientes":
     st.header("🐶 Cadastro de Pacientes")
     if not st.session_state.tutores:
-        st.warning("⚠️ Cadastre um tutor antes de adicionar um pet.")
+        st.warning("Cadastre um tutor primeiro.")
     else:
         with st.form("f_pet", clear_on_submit=True):
             t_map = {t['id']: t['nome'] for t in st.session_state.tutores}
             t_id = st.selectbox("Responsável", options=list(t_map.keys()), format_func=lambda x: t_map[x])
             
             c1, c2 = st.columns(2)
-            nome_p = c1.text_input("Nome do Pet *").upper()
-            raca = c2.text_input("Raça").upper()
+            nome_p = c1.text_input("NOME DO PET *").upper()
+            raca = c2.selectbox("RAÇA", options=RACAS_COMUNS)
             
-            # Data de Nascimento com formato BR visual
-            nasc = st.date_input("Data de Nascimento (Aniversário)", format="DD/MM/YYYY")
+            if raca == "Outra":
+                raca_especifica = st.text_input("Especifique a Raça").upper()
+                raca = raca_especifica if raca_especifica else "OUTRA"
+
+            nasc = st.date_input("DATA DE NASCIMENTO", format="DD/MM/YYYY")
             
-            if st.form_submit_button("CADASTRAR PACIENTE"):
+            if st.form_submit_button("CADASTRAR PET"):
                 if nome_p:
                     st.session_state.pets.append({
                         "id": str(uuid.uuid4()), "t_id": t_id, 
                         "nome": nome_p, "raca": raca, "nasc": str(nasc)
                     })
-                    st.success(f"Paciente {nome_p} registrado!")
-                else:
-                    st.error("O nome do pet é obrigatório.")
+                    st.success(f"{nome_p} ({raca}) cadastrado!")
 
-# --- 3. PRONTUÁRIO (Com Verificação de Erro 'KeyError') ---
+# --- 3. PRONTUÁRIO (Seleção Inteligente) ---
 elif menu == "Prontuário":
     st.header("📝 Atendimento Médico")
     if not st.session_state.pets:
-        st.info("Nenhum paciente cadastrado para atendimento.")
+        st.info("Nenhum pet cadastrado.")
     else:
-        p_id = st.selectbox("Selecionar Paciente", options=[p['id'] for p in st.session_state.pets], 
-                            format_func=lambda x: next(p['nome'] for p in st.session_state.pets if p['id'] == x))
+        # Aqui resolvemos o problema de nomes iguais: mostramos Nome + Raça + Idade no seletor
+        def formatar_pet_seletor(p_id):
+            p = next(pet for pet in st.session_state.pets if pet['id'] == p_id)
+            idade = calcular_idade_seguro(p['nasc'])
+            return f"{p['nome']} - {p['raca']} ({idade})"
+
+        pet_id = st.selectbox("SELECIONE O PACIENTE", 
+                             options=[p['id'] for p in st.session_state.pets],
+                             format_func=formatar_pet_seletor)
         
-        # Busca segura do pet e tutor
-        pet = next(p for p in st.session_state.pets if p['id'] == p_id)
+        pet = next(p for p in st.session_state.pets if p['id'] == pet_id)
         tutor = next(t for t in st.session_state.tutores if t['id'] == pet['t_id'])
-        
-        # Card de informações usando .get() para evitar KeyError
-        idade = calcular_idade(pet.get('nasc', ''))
-        st.markdown(f"""
-        <div style="background-color: #f0f4f8; padding: 15px; border-radius: 10px; border-left: 5px solid #2b6cb0;">
-            <b>PACIENTE:</b> {pet['nome']} ({pet['raca']}) | <b>IDADE:</b> {idade}<br>
-            <b>TUTOR:</b> {tutor['nome']} | <b>ZAP:</b> {tutor['zap']}<br>
-            <b>ENDEREÇO:</b> {tutor.get('endereco', 'Não informado')}
-        </div>
-        """, unsafe_allow_html=True)
 
-        anamnese = st.text_area("Anamnese / Sintomas (Dite aqui)", height=150)
-        conduta = st.text_area("Conduta / Medicamentos", height=150)
-        valor_atendimento = st.number_input("Valor da Consulta R$", min_value=0.0)
-        
-        if st.button("💾 FINALIZAR ATENDIMENTO"):
-            # Salva no histórico
-            st.session_state.records.append({
-                "p_id": p_id, "data": date.today().strftime("%d/%m/%Y"), 
-                "anamnese": anamnese, "conduta": conduta, "valor": valor_atendimento
-            })
-            # Lança no financeiro automaticamente
-            st.session_state.financeiro.append({
-                "data": str(date.today()), "item": f"Consulta: {pet['nome']}", 
-                "valor": valor_atendimento, "tipo": "Receita"
-            })
-            st.success("Prontuário gravado e financeiro atualizado!")
+        st.info(f"📋 **Paciente:** {pet['nome']} | **Tutor:** {tutor['nome']} | **Endereço:** {tutor.get('end', 'N/D')}")
 
-# --- 4. EXAMES & PROCEDIMENTOS ---
-elif menu == "Exames & Procedimentos":
-    st.header("🔬 Exames e Procedimentos")
-    tab1, tab2 = st.tabs(["Cadastrar Exame", "Registrar Procedimento"])
-    with tab1:
-        ex_nome = st.text_input("Nome do Exame")
-        ex_res = st.text_area("Resultado/Observação")
-        if st.button("Salvar Exame"):
-            st.session_state.exames.append({"nome": ex_nome, "obs": ex_res, "data": str(date.today())})
-            st.success("Exame protocolado.")
-    with tab2:
-        proc_nome = st.text_input("Procedimento (ex: Limpeza de Tártaro)")
-        if st.button("Salvar Procedimento"):
-            st.session_state.procedimentos.append({"nome": proc_nome, "data": str(date.today())})
-            st.success("Procedimento registrado.")
+        with st.form("f_consulta"):
+            anamnese = st.text_area("Sintomas (Win + H para ditar)")
+            conduta = st.text_area("Conduta e Receituário")
+            valor = st.number_input("Valor da Consulta R$", min_value=0.0)
+            if st.form_submit_button("SALVAR ATENDIMENTO"):
+                st.session_state.records.append({
+                    "p_id": pet_id, "data": date.today().strftime("%d/%m/%Y"), 
+                    "anamnese": anamnese, "conduta": conduta
+                })
+                st.session_state.financeiro.append({"data": str(date.today()), "item": f"Consulta: {pet['nome']}", "valor": valor})
+                st.success("Gravado!")
 
-# --- 5. FINANCEIRO ---
-elif menu == "Financeiro":
-    st.header("💰 Controle Financeiro")
-    if st.session_state.financeiro:
-        df_f = pd.DataFrame(st.session_state.financeiro)
-        st.metric("Faturamento Total", f"R$ {df_f['valor'].sum():.2f}")
-        st.table(df_f)
-    else:
-        st.info("Nenhuma movimentação financeira.")
-
-# --- 6. ESTOQUE & SERVIÇOS ---
-elif menu == "Estoque & Serviços":
-    st.header("📦 Cadastro de Produtos e Serviços")
-    with st.form("f_estoque"):
-        item = st.text_input("Nome do Produto ou Serviço").upper()
-        preco = st.number_input("Preço R$", min_value=0.0)
-        if st.form_submit_button("ADICIONAR"):
-            st.session_state.estoque_servicos.append({"item": item, "preco": preco})
-    st.table(pd.DataFrame(st.session_state.estoque_servicos))
-
-# --- 7. RASCUNHO ---
-elif menu == "Rascunho":
-    st.header("📓 Bloco de Notas (Rascunhos Rápidos)")
-    st.session_state.rascunho = st.text_area("Escreva aqui suas notas...", value=st.session_state.get('rascunho', ""), height=300)
-
-# --- 8. DADOS & BACKUP ---
-elif menu == "Dados & Backup":
-    st.header("💾 Gerenciar Dados do Computador")
-    
-    # Prepara o arquivo para baixar no PC
+# --- 4. DADOS E BACKUP ---
+elif menu == "Dados":
+    st.header("💾 Salvar no Computador")
     dados_completos = {k: st.session_state[k] for k in chaves_sistema}
-    json_data = json.dumps(dados_completos, indent=4)
+    st.download_button("📥 BAIXAR BACKUP COMPLETO", 
+                      data=json.dumps(dados_completos, indent=4), 
+                      file_name=f"vet_backup_{date.today()}.json")
     
-    st.download_button(
-        label="📥 BAIXAR TUDO E SALVAR NO PC",
-        data=json_data,
-        file_name=f"ribeira_vet_backup_{date.today()}.json",
-        mime="application/json"
-    )
-    
-    if st.button("🚨 LIMPAR TUDO (RECOMENDADO PARA ATUALIZAR VERSÃO)"):
+    if st.button("🚨 LIMPAR TUDO (PARA NOVA VERSÃO)"):
         st.session_state.clear()
         st.rerun()
