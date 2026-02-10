@@ -1,61 +1,125 @@
 
-import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useRef } from 'react';
+import { GoogleGenAI, Modality } from '@google/genai';
+import { encodeAudio, decodeAudio, decodeAudioData } from '../utils/audio';
 
-const Sidebar: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
+const LivePanel: React.FC = () => {
+  const [isActive, setIsActive] = useState(false);
+  const [transcription, setTranscription] = useState<string[]>([]);
+  const sessionRef = useRef<any>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const nextStartTimeRef = useRef(0);
+  const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
 
-  const navItems = [
-    { path: '/', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-    { path: '/chat', label: 'Inteligência', icon: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z' },
-    { path: '/live', label: 'Aura Live', icon: 'M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z' },
-    { path: '/video', label: 'Criação Vídeo', icon: 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z' },
-    { path: '/art', label: 'Artes Visuais', icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-    { path: '/search', label: 'Engine Pesquisa', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
-  ];
+  const stopSession = () => {
+    if (sessionRef.current) {
+      sessionRef.current.close();
+      sessionRef.current = null;
+    }
+    setIsActive(false);
+    sourcesRef.current.forEach(s => s.stop());
+    sourcesRef.current.clear();
+  };
+
+  const startSession = async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const inputContext = new AudioContext({ sampleRate: 16000 });
+      
+      const sessionPromise = ai.live.connect({
+        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
+          inputAudioTranscription: {},
+          outputAudioTranscription: {},
+          systemInstruction: "Você é Aura, uma assistente virtual de luxo, extremamente inteligente e prestativa. Fale em Português de forma elegante."
+        },
+        callbacks: {
+          onopen: () => {
+            setIsActive(true);
+            const source = inputContext.createMediaStreamSource(stream);
+            const processor = inputContext.createScriptProcessor(4096, 1, 1);
+            processor.onaudioprocess = (e) => {
+              const inputData = e.inputBuffer.getChannelData(0);
+              const int16 = new Int16Array(inputData.length);
+              for (let i = 0; i < inputData.length; i++) int16[i] = inputData[i] * 32768;
+              sessionPromise.then(s => s.sendRealtimeInput({ 
+                media: { data: encodeAudio(new Uint8Array(int16.buffer)), mimeType: 'audio/pcm;rate=16000' } 
+              }));
+            };
+            source.connect(processor);
+            processor.connect(inputContext.destination);
+          },
+          onmessage: async (msg) => {
+            if (msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data) {
+              const audioData = decodeAudio(msg.serverContent.modelTurn.parts[0].inlineData.data);
+              const ctx = audioContextRef.current!;
+              nextStartTimeRef.current = Math.max(nextStartTimeRef.current, ctx.currentTime);
+              const buffer = await decodeAudioData(audioData, ctx, 24000, 1);
+              const source = ctx.createBufferSource();
+              source.buffer = buffer;
+              source.connect(ctx.destination);
+              source.start(nextStartTimeRef.current);
+              nextStartTimeRef.current += buffer.duration;
+              sourcesRef.current.add(source);
+            }
+            if (msg.serverContent?.outputTranscription) {
+               setTranscription(prev => [...prev.slice(-3), `Aura: ${msg.serverContent?.outputTranscription?.text}`]);
+            }
+          },
+          onclose: () => stopSession(),
+          onerror: () => stopSession()
+        }
+      });
+      sessionRef.current = await sessionPromise;
+    } catch (e) {
+      alert("Erro no microfone.");
+    }
+  };
 
   return (
-    <div className="w-64 glass-panel border-r border-slate-800/40 flex flex-col h-full z-20">
-      <div className="p-8">
-        <div className="flex items-center gap-3 mb-10 cursor-pointer" onClick={() => navigate('/')}>
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <span className="text-white font-bold text-xl">A</span>
-          </div>
-          <h1 className="text-xl font-bold tracking-tight text-white">Aura Studio</h1>
-        </div>
-
-        <nav className="space-y-1.5">
-          {navItems.map((item) => (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
-                location.pathname === item.path
-                  ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 shadow-sm'
-                  : 'text-slate-400 hover:bg-slate-800/30 hover:text-slate-200'
-              }`}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
-              </svg>
-              <span className="font-medium text-xs">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      <div className="mt-auto p-8 border-t border-slate-800/40">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-500 border border-slate-700">US</div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-white truncate">Usuário Aura</p>
-            <p className="text-[10px] text-slate-500 truncate">Sessão Profissional</p>
+    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-900/40">
+      <div className="max-w-xl w-full text-center space-y-12">
+        <div className="relative flex justify-center">
+          <div className={`w-64 h-64 rounded-full flex items-center justify-center transition-all duration-1000 ${isActive ? 'bg-indigo-500/10 scale-110' : 'bg-white/5'}`}>
+             <div className={`w-40 h-40 rounded-full flex items-center justify-center transition-all duration-500 ${isActive ? 'bg-indigo-600 shadow-[0_0_50px_rgba(79,70,229,0.4)]' : 'bg-slate-800'}`}>
+                <svg className={`w-16 h-16 text-white ${isActive ? 'animate-pulse' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+             </div>
+             {isActive && [1, 2, 3].map(i => (
+               <div key={i} className={`absolute inset-0 border border-indigo-500 rounded-full animate-ping opacity-20`} style={{ animationDelay: `${i * 0.5}s` }}></div>
+             ))}
           </div>
         </div>
+
+        <div className="space-y-4">
+          <h2 className="text-4xl font-black text-white">{isActive ? 'Aura está ouvindo...' : 'Aura Live Voice'}</h2>
+          <p className="text-slate-400">Converse naturalmente sobre qualquer assunto.</p>
+        </div>
+
+        <div className="min-h-[100px] glass-panel p-6 rounded-[2rem] text-sm text-slate-300 text-left space-y-2">
+          {transcription.length === 0 ? "A transcrição aparecerá aqui..." : transcription.map((t, i) => <p key={i}>{t}</p>)}
+        </div>
+
+        <button
+          onClick={isActive ? stopSession : startSession}
+          className={`px-12 py-5 rounded-3xl font-bold text-lg transition-all ${
+            isActive ? 'bg-rose-500 text-white hover:bg-rose-600' : 'bg-indigo-600 text-white hover:bg-indigo-500 hover:scale-105'
+          }`}
+        >
+          {isActive ? 'Encerrar Chamada' : 'Iniciar Conversa'}
+        </button>
       </div>
     </div>
   );
 };
 
-export default Sidebar;
+export default LivePanel;
