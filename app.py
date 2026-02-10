@@ -1,74 +1,85 @@
 
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aura AI Studio</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-deep: #020617;
-            --accent: #6366f1;
-        }
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        html, body, #root {
-            height: 100%;
-            width: 100%;
-            overflow: hidden;
-            background-color: var(--bg-deep);
-            color: #f8fafc;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 5px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #1e293b;
-            border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #334155;
-        }
-        @keyframes fade-in {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-            animation: fade-in 0.4s ease-out forwards;
-        }
-    </style>
-    <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@19.0.0",
-    "react-dom": "https://esm.sh/react-dom@19.0.0",
-    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
-    "react-router-dom": "https://esm.sh/react-router-dom@7.1.0",
-    "@google/genai": "https://esm.sh/@google/genai@1.4.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/"
+import { GoogleGenAI } from "@google/genai";
+
+const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+
+export const creativeChat = async (prompt: string, useThinking: boolean = false) => {
+  const ai = getAI();
+  const modelName = useThinking ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
+  
+  const config: any = {
+    temperature: 0.8,
+    topP: 0.9,
+  };
+
+  if (useThinking) {
+    config.thinkingConfig = { thinkingBudget: 16000 };
   }
-}
-</script>
-</head>
-<body>
-    <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
-</body>
-</html>
+
+  return await ai.models.generateContent({
+    model: modelName,
+    contents: prompt,
+    config,
+  });
+};
+
+export const generateArt = async (prompt: string, aspectRatio: string = "1:1") => {
+  const ai = getAI();
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: { parts: [{ text: prompt }] },
+    config: { imageConfig: { aspectRatio: aspectRatio as any } }
+  });
+
+  for (const part of response.candidates?.[0]?.content?.parts || []) {
+    if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
+  }
+  throw new Error("No image data returned from Gemini.");
+};
+
+export const generateVideo = async (prompt: string) => {
+  const ai = getAI();
+  let operation = await ai.models.generateVideos({
+    model: 'veo-3.1-fast-generate-preview',
+    prompt: prompt,
+    config: {
+      numberOfVideos: 1,
+      resolution: '720p',
+      aspectRatio: '16:9'
+    }
+  });
+
+  while (!operation.done) {
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    operation = await ai.operations.getVideosOperation({ operation: operation });
+  }
+
+  const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+  const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+};
+
+export const mapsSearch = async (query: string, location?: { latitude: number, longitude: number }) => {
+  const ai = getAI();
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: query,
+    config: {
+      tools: [{ googleMaps: {} }, { googleSearch: {} }],
+      toolConfig: {
+        retrievalConfig: {
+          latLng: location ? {
+            latitude: location.latitude,
+            longitude: location.longitude
+          } : undefined
+        }
+      }
+    },
+  });
+
+  return {
+    text: response.text,
+    grounding: response.candidates?.[0]?.groundingMetadata?.groundingChunks || []
+  };
+};
