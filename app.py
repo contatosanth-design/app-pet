@@ -1,188 +1,115 @@
 import streamlit as st
 import sqlite3
-from datetime import datetime
+from datetime import datetime, date
 
-st.set_page_config(page_title="Clínica Veterinária", layout="wide")
+# --- CONFIGURAÇÃO ---
+st.set_page_config(page_title="Ribeira Vet Pro 7.0", layout="wide")
 
-# ======================
-# BANCO DE DADOS
-# ======================
-conn = sqlite3.connect("clinica_vet.db", check_same_thread=False)
+# --- BANCO DE DADOS ATUALIZADO ---
+conn = sqlite3.connect("clinica_vet_v7.db", check_same_thread=False)
 c = conn.cursor()
 
-# ======================
-# TABELAS
-# ======================
-c.execute("""
-CREATE TABLE IF NOT EXISTS tutores (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    codigo TEXT,
-    nome TEXT,
-    cpf TEXT,
-    whatsapp TEXT,
-    endereco TEXT
-)
-""")
-
-c.execute("""
-CREATE TABLE IF NOT EXISTS pets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    codigo TEXT,
-    nome TEXT,
-    especie TEXT,
-    raca TEXT,
-    tutor_id INTEGER
-)
-""")
-
-c.execute("""
-CREATE TABLE IF NOT EXISTS prontuario (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    pet_id INTEGER,
-    data TEXT,
-    rascunho TEXT
-)
-""")
-
-c.execute("""
-CREATE TABLE IF NOT EXISTS servicos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    codigo TEXT,
-    descricao TEXT,
-    tipo TEXT,
-    preco REAL
-)
-""")
-
-c.execute("""
-CREATE TABLE IF NOT EXISTS financeiro (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    data TEXT,
-    descricao TEXT,
-    valor REAL
-)
-""")
-
-conn.commit()
-
-# ======================
-# DADOS INICIAIS
-# ======================
-c.execute("SELECT COUNT(*) FROM servicos")
-if c.fetchone()[0] == 0:
-    c.executemany("""
-        INSERT INTO servicos (codigo, descricao, tipo, preco)
-        VALUES (?,?,?,?)
-    """, [
-        ("S001", "Consulta Clínica", "Serviço", 120),
-        ("S002", "Vacinação", "Serviço", 90),
-        ("S003", "Telemedicina", "Serviço", 80),
-        ("P001", "Vermífugo", "Produto", 40),
-        ("P002", "Antipulgas", "Produto", 110),
-        ("P003", "Ração Terapêutica", "Produto", 180)
-    ])
+def init_db():
+    c.execute("""CREATE TABLE IF NOT EXISTS tutores 
+                 (id INTEGER PRIMARY KEY, nome TEXT, cpf TEXT, zap TEXT, endereco TEXT)""")
+    
+    # Adicionamos 'nascimento' e 'especie' para o cálculo de idade
+    c.execute("""CREATE TABLE IF NOT EXISTS pets 
+                 (id INTEGER PRIMARY KEY, nome TEXT, raca TEXT, nascimento TEXT, tutor_id INTEGER)""")
+    
+    c.execute("""CREATE TABLE IF NOT EXISTS prontuario 
+                 (id INTEGER PRIMARY KEY, pet_id INTEGER, data TEXT, anamnese TEXT, conduta TEXT, valor REAL)""")
+    
+    c.execute("""CREATE TABLE IF NOT EXISTS financeiro 
+                 (id INTEGER PRIMARY KEY, data TEXT, descricao TEXT, valor REAL, tipo TEXT)""")
     conn.commit()
 
-# ======================
-# MENU
-# ======================
-menu = st.sidebar.radio(
-    "Menu",
-    ["Tutores", "Pets", "Prontuário", "Serviços & Produtos", "Financeiro"]
-)
+init_db()
 
-# ======================
-# TUTORES
-# ======================
+# --- RAÇAS VERSÃO 2.0 ---
+RACAS = ["SRD", "Shih Tzu", "Poodle", "Pinscher", "Golden Retriever", "Pit Bull", "Persa", "Siamês", "Outra"]
+
+# --- SIDEBAR ---
+with st.sidebar:
+    st.title("🐾 Ribeira Vet Pro")
+    menu = st.radio("Navegação", ["Início", "Tutores", "Pacientes", "Atendimento", "Financeiro"])
+    st.divider()
+    st.info("💡 Use Win + H nos campos de texto para ditar.")
+
+# --- TELA: TUTORES ---
 if menu == "Tutores":
     st.header("👤 Cadastro de Tutores")
+    with st.form("tutor_form"):
+        col1, col2 = st.columns(2)
+        nome = col1.text_input("Nome Completo").upper()
+        cpf = col2.text_input("CPF")
+        zap = col1.text_input("WhatsApp")
+        end = col2.text_input("Endereço Completo")
+        if st.form_submit_button("Salvar Tutor"):
+            c.execute("INSERT INTO tutores (nome, cpf, zap, endereco) VALUES (?,?,?,?)", (nome, cpf, zap, end))
+            conn.commit()
+            st.success("Tutor cadastrado!")
 
-    codigo = st.text_input("Código do Tutor")
-    nome = st.text_input("Nome")
-    cpf = st.text_input("CPF")
-    zap = st.text_input("WhatsApp")
-    end = st.text_input("Endereço")
-
-    if st.button("Salvar Tutor"):
-        c.execute("""
-            INSERT INTO tutores (codigo, nome, cpf, whatsapp, endereco)
-            VALUES (?,?,?,?,?)
-        """, (codigo, nome, cpf, zap, end))
-        conn.commit()
-        st.success("Tutor cadastrado")
-
-    st.subheader("Tutores cadastrados")
-    st.table(c.execute("SELECT codigo, nome, cpf, whatsapp FROM tutores").fetchall())
-
-# ======================
-# PETS
-# ======================
-elif menu == "Pets":
-    st.header("🐾 Cadastro de Pets")
-
-    codigo = st.text_input("Código do Pet")
-    nome = st.text_input("Nome do Pet")
-    especie = st.text_input("Espécie")
-    raca = st.text_input("Raça")
-
+# --- TELA: PACIENTES ---
+elif menu == "Pacientes":
+    st.header("🐶 Cadastro de Pets")
     tutores = c.execute("SELECT id, nome FROM tutores").fetchall()
-    tutor = st.selectbox("Tutor", tutores, format_func=lambda x: x[1])
+    if not tutores:
+        st.warning("Cadastre um tutor primeiro.")
+    else:
+        with st.form("pet_form"):
+            tutor_id = st.selectbox("Responsável", tutores, format_func=lambda x: x[1])
+            col1, col2 = st.columns(2)
+            nome_pet = col1.text_input("Nome do Pet").upper()
+            raca = col2.selectbox("Raça", RACAS)
+            nasc = st.date_input("Data de Nascimento", format="DD/MM/YYYY")
+            if st.form_submit_button("Cadastrar Pet"):
+                c.execute("INSERT INTO pets (nome, raca, nascimento, tutor_id) VALUES (?,?,?,?)", 
+                          (nome_pet, raca, str(nasc), tutor_id[0]))
+                conn.commit()
+                st.success(f"{nome_pet} cadastrado!")
 
-    if st.button("Salvar Pet"):
-        c.execute("""
-            INSERT INTO pets (codigo, nome, especie, raca, tutor_id)
-            VALUES (?,?,?,?,?)
-        """, (codigo, nome, especie, raca, tutor[0]))
-        conn.commit()
-        st.success("Pet cadastrado")
+# --- TELA: ATENDIMENTO (PRONTUÁRIO) ---
+elif menu == "Atendimento":
+    st.header("📝 Prontuário Médico")
+    pets = c.execute("SELECT pets.id, pets.nome, tutores.nome FROM pets JOIN tutores ON pets.tutor_id = tutores.id").fetchall()
+    
+    if not pets:
+        st.info("Nenhum pet cadastrado.")
+    else:
+        pet_sel = st.selectbox("Selecionar Paciente", pets, format_func=lambda x: f"{x[1]} (Tutor: {x[2]})")
+        
+        col1, col2 = st.columns(2)
+        anamnese = col1.text_area("Anamnese / Sintomas", height=200)
+        conduta = col2.text_area("Conduta / Prescrição", height=200)
+        valor = st.number_input("Valor da Consulta (R$)", min_value=0.0)
 
-    st.table(c.execute("SELECT codigo, nome, especie, raca FROM pets").fetchall())
+        if st.button("💾 Finalizar Atendimento"):
+            hoje = datetime.now().strftime("%d/%m/%Y")
+            # Salva no Prontuário
+            c.execute("INSERT INTO prontuario (pet_id, data, anamnese, conduta, valor) VALUES (?,?,?,?,?)",
+                      (pet_sel[0], hoje, anamnese, conduta, valor))
+            # Lança no Financeiro automaticamente
+            c.execute("INSERT INTO financeiro (data, descricao, valor, tipo) VALUES (?,?,?,?)",
+                      (hoje, f"Consulta: {pet_sel[1]}", valor, "Receita"))
+            conn.commit()
+            st.success("Tudo salvo e financeiro atualizado!")
 
-# ======================
-# PRONTUÁRIO
-# ======================
-elif menu == "Prontuário":
-    st.header("📄 Prontuário / Rascunho")
-
-    pets = c.execute("SELECT id, nome FROM pets").fetchall()
-    pet = st.selectbox("Pet", pets, format_func=lambda x: x[1])
-
-    rascunho = st.text_area("Anotações livres", height=250)
-
-    if st.button("Salvar Prontuário"):
-        c.execute("""
-            INSERT INTO prontuario (pet_id, data, rascunho)
-            VALUES (?,?,?)
-        """, (pet[0], datetime.now().strftime("%d/%m/%Y"), rascunho))
-        conn.commit()
-        st.success("Prontuário salvo")
-
-# ======================
-# SERVIÇOS
-# ======================
-elif menu == "Serviços & Produtos":
-    st.header("🧾 Serviços e Produtos")
-
-    st.table(c.execute(
-        "SELECT codigo, descricao, tipo, preco FROM servicos"
-    ).fetchall())
-
-# ======================
-# FINANCEIRO
-# ======================
+# --- TELA: FINANCEIRO ---
 elif menu == "Financeiro":
-    st.header("💰 Financeiro")
+    st.header("💰 Controle de Caixa")
+    resumo = c.execute("SELECT SUM(valor) FROM financeiro").fetchone()[0]
+    st.metric("Faturamento Total", f"R$ {resumo if resumo else 0:.2f}")
+    
+    dados = c.execute("SELECT data, descricao, valor FROM financeiro ORDER BY id DESC").fetchall()
+    if dados:
+        df = pd.DataFrame(dados, columns=["Data", "Descrição", "Valor"])
+        st.dataframe(df, use_container_width=True)
 
-    desc = st.text_input("Descrição")
-    valor = st.number_input("Valor", step=1.0)
-
-    if st.button("Registrar"):
-        c.execute("""
-            INSERT INTO financeiro (data, descricao, valor)
-            VALUES (?,?,?)
-        """, (datetime.now().strftime("%Y-%m-%d"), desc, valor))
-        conn.commit()
-        st.success("Registro salvo")
-
-    total = c.execute("SELECT SUM(valor) FROM financeiro").fetchone()[0]
-    st.metric("Total Geral", f"R$ {total if total else 0:.2f}")
+# --- TELA: INÍCIO ---
+elif menu == "Início":
+    st.title("Bem-vindo ao Ribeira Vet Pro")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Tutores", c.execute("SELECT COUNT(*) FROM tutores").fetchone()[0])
+    c2.metric("Pacientes", c.execute("SELECT COUNT(*) FROM pets").fetchone()[0])
+    c3.metric("Consultas", c.execute("SELECT COUNT(*) FROM prontuario").fetchone()[0])
