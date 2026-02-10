@@ -1,6 +1,7 @@
 
 import { GoogleGenAI } from "@google/genai";
 
+// Criamos uma instância nova a cada chamada para garantir que pegamos a chave atualizada do process.env
 const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
 export const creativeChat = async (prompt: string, useThinking: boolean = false) => {
@@ -50,12 +51,14 @@ export const generateVideo = async (prompt: string) => {
   });
 
   while (!operation.done) {
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await new Promise(resolve => setTimeout(resolve, 8000));
     operation = await ai.operations.getVideosOperation({ operation: operation });
   }
 
   const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+  // Anexamos a chave API ao link de download conforme exigido
   const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+  if (!response.ok) throw new Error("Falha ao baixar vídeo.");
   const blob = await response.blob();
   return URL.createObjectURL(blob);
 };
