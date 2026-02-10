@@ -39,7 +39,7 @@ const LivePanel: React.FC = () => {
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
           inputAudioTranscription: {},
           outputAudioTranscription: {},
-          systemInstruction: "Você é Aura, uma assistente virtual de luxo, extremamente inteligente e prestativa. Fale em Português de forma elegante."
+          systemInstruction: "Você é Aura, uma assistente virtual de luxo, extremamente inteligente e prestativa. Fale em Português de forma elegante e amigável."
         },
         callbacks: {
           onopen: () => {
@@ -69,24 +69,32 @@ const LivePanel: React.FC = () => {
               source.start(nextStartTimeRef.current);
               nextStartTimeRef.current += buffer.duration;
               sourcesRef.current.add(source);
+              source.onended = () => sourcesRef.current.delete(source);
             }
             if (msg.serverContent?.outputTranscription) {
-               setTranscription(prev => [...prev.slice(-3), `Aura: ${msg.serverContent?.outputTranscription?.text}`]);
+               setTranscription(prev => [...prev.slice(-3), `Aura: ${msg.serverContent.outputTranscription.text}`]);
+            }
+            if (msg.serverContent?.inputTranscription) {
+               setTranscription(prev => [...prev.slice(-3), `Você: ${msg.serverContent.inputTranscription.text}`]);
             }
           },
           onclose: () => stopSession(),
-          onerror: () => stopSession()
+          onerror: (e) => {
+            console.error("Erro na Live API:", e);
+            stopSession();
+          }
         }
       });
       sessionRef.current = await sessionPromise;
     } catch (e) {
-      alert("Erro no microfone.");
+      console.error(e);
+      alert("Erro ao acessar microfone. Verifique as permissões.");
     }
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-900/40">
-      <div className="max-w-xl w-full text-center space-y-12">
+    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-900/40 overflow-y-auto custom-scrollbar">
+      <div className="max-w-xl w-full text-center space-y-12 py-10">
         <div className="relative flex justify-center">
           <div className={`w-64 h-64 rounded-full flex items-center justify-center transition-all duration-1000 ${isActive ? 'bg-indigo-500/10 scale-110' : 'bg-white/5'}`}>
              <div className={`w-40 h-40 rounded-full flex items-center justify-center transition-all duration-500 ${isActive ? 'bg-indigo-600 shadow-[0_0_50px_rgba(79,70,229,0.4)]' : 'bg-slate-800'}`}>
@@ -95,24 +103,32 @@ const LivePanel: React.FC = () => {
                 </svg>
              </div>
              {isActive && [1, 2, 3].map(i => (
-               <div key={i} className={`absolute inset-0 border border-indigo-500 rounded-full animate-ping opacity-20`} style={{ animationDelay: `${i * 0.5}s` }}></div>
+               <div key={i} className="absolute inset-0 border border-indigo-500 rounded-full animate-ping opacity-20" style={{ animationDelay: `${i * 0.5}s` }}></div>
              ))}
           </div>
         </div>
 
         <div className="space-y-4">
           <h2 className="text-4xl font-black text-white">{isActive ? 'Aura está ouvindo...' : 'Aura Live Voice'}</h2>
-          <p className="text-slate-400">Converse naturalmente sobre qualquer assunto.</p>
+          <p className="text-slate-400">Experimente uma conversa fluida e natural com IA.</p>
         </div>
 
-        <div className="min-h-[100px] glass-panel p-6 rounded-[2rem] text-sm text-slate-300 text-left space-y-2">
-          {transcription.length === 0 ? "A transcrição aparecerá aqui..." : transcription.map((t, i) => <p key={i}>{t}</p>)}
+        <div className="min-h-[120px] glass-panel p-6 rounded-[2rem] text-sm text-slate-300 text-left space-y-3">
+          {transcription.length === 0 ? (
+            <p className="text-slate-500 italic text-center">A transcrição aparecerá aqui conforme você fala...</p>
+          ) : (
+            transcription.map((t, i) => (
+              <p key={i} className={t.startsWith('Você:') ? 'text-indigo-400 font-medium' : 'text-slate-300'}>
+                {t}
+              </p>
+            ))
+          )}
         </div>
 
         <button
           onClick={isActive ? stopSession : startSession}
-          className={`px-12 py-5 rounded-3xl font-bold text-lg transition-all ${
-            isActive ? 'bg-rose-500 text-white hover:bg-rose-600' : 'bg-indigo-600 text-white hover:bg-indigo-500 hover:scale-105'
+          className={`px-12 py-5 rounded-3xl font-bold text-lg transition-all shadow-xl active:scale-95 ${
+            isActive ? 'bg-rose-500 text-white hover:bg-rose-600 shadow-rose-500/20' : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-indigo-500/20'
           }`}
         >
           {isActive ? 'Encerrar Chamada' : 'Iniciar Conversa'}
