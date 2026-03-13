@@ -3,181 +3,163 @@ import pandas as pd
 import os
 from datetime import datetime
 
-# 1. CONFIGURAÇÃO E ESTILO "CLEAN PRO"
-st.set_page_config(page_title="Ribeira Vet Pro v19", layout="wide", page_icon="🏥")
+# 1. ESTILO E CONFIGURAÇÃO
+st.set_page_config(page_title="Ribeira Vet Pro v20", layout="wide", page_icon="🏥")
 
 st.markdown("""
     <style>
-    .stApp { background-color: #FFFFFF !important; color: #1E293B !important; }
+    .stApp { background-color: #FFFFFF !important; }
     [data-testid="stSidebar"] { background-color: #0F172A !important; }
-    [data-testid="stSidebar"] * { color: white !important; }
     
-    /* Botões Amarelo Ouro - Estilo Moderno */
+    /* BOTÃO AMARELO VIBRANTE */
     div.stButton > button {
         background-color: #FFD700 !important;
         color: #000000 !important;
         font-weight: bold !important;
-        border: none !important;
+        border: 2px solid #B8860B !important;
         border-radius: 8px !important;
-        height: 3em !important;
         width: 100% !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
     }
-    div.stButton > button:hover { background-color: #E6C200 !important; }
-
-    /* Inputs Organizados */
-    input, textarea, select { border: 1px solid #CBD5E1 !important; border-radius: 5px !important; }
     
-    /* Cards de Informação */
-    .card { background: #F8FAFC; padding: 15px; border-radius: 10px; border-left: 4px solid #FFD700; margin-bottom: 10px; }
+    /* TABELAS E CARDS */
+    .stDataFrame { background-color: #F8FAFC !important; border-radius: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. MOTOR DE DADOS (PREVENÇÃO DE DUPLICIDADE)
-def gerenciar_dados(nome_arquivo, colunas):
-    if not os.path.exists(nome_arquivo):
-        pd.DataFrame(columns=colunas).to_csv(nome_arquivo, index=False)
-    return pd.read_csv(nome_arquivo)
+# 2. FUNÇÕES DE BANCO DE DADOS
+def salvar_dados(df, arquivo):
+    df.to_csv(arquivo, index=False)
 
-# Inicialização de Bases
-df_tutores = gerenciar_dados('tutores_v19.csv', ["CPF", "Nome", "Email", "WhatsApp", "Endereco", "Bairro", "Cidade", "Nascimento"])
-df_pets = gerenciar_dados('pets_v19.csv', ["CPF_Tutor", "Pet", "Especie", "Raca", "Sexo", "Peso", "Microchip"])
-df_servicos = gerenciar_dados('catalogo_v19.csv', ["Tipo", "Item", "Preco"])
-df_vendas = gerenciar_dados('vendas_v19.csv', ["Data", "Cliente", "Item", "Valor"])
-df_prontuario = gerenciar_dados('prontuario_v19.csv', ["Data", "Pet", "Sintomas", "Diagnostico", "Prescricao"])
+def carregar_dados(arquivo, colunas):
+    if os.path.exists(arquivo):
+        return pd.read_csv(arquivo)
+    return pd.DataFrame(columns=colunas)
 
-# 3. BARRA LATERAL (LOGO 40x40 E MENU)
+# Arquivos Versão 20
+ARQ_TUTORES = 'db_tutores_v20.csv'
+ARQ_PETS = 'db_pets_v20.csv'
+ARQ_VENDAS = 'db_vendas_v20.csv'
+
+# Inicialização
+if 'dt_tutores' not in st.session_state:
+    st.session_state.dt_tutores = carregar_dados(ARQ_TUTORES, ["CPF", "Nome", "Email", "WhatsApp", "Endereço", "Bairro", "Cidade"])
+if 'dt_pets' not in st.session_state:
+    st.session_state.dt_pets = carregar_dados(ARQ_PETS, ["Dono_CPF", "Pet_Nome", "Especie", "Raca", "Sexo", "Peso", "Idade"])
+
+# 3. BARRA LATERAL
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/2138/2138440.png", width=40)
     st.title("Ribeira Vet Pro")
-    menu = st.radio("Módulos de Gestão:", 
-                    ["📊 Dashboard", "👤 Clientes & Pets", "⚕️ Atendimento", "💰 Financeiro & Estoque", "🤝 Relacionamento"])
+    menu = st.radio("Navegação:", ["👤 Clientes", "🐾 Animais", "⚕️ Prontuário", "💰 Financeiro"])
     st.divider()
-    st.caption("v19.0 - Estável")
+    st.info("Versão 20.0 - Estável")
 
-# 4. LÓGICA DAS PÁGINAS
+# 4. MÓDULOS
 
-if menu == "📊 Dashboard":
-    st.header("📊 Painel de Controle")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Clientes", len(df_tutores))
-    col2.metric("Pets", len(df_pets))
-    col3.metric("Faturamento", f"R$ {df_vendas['Valor'].sum():.2f}")
-    col4.metric("Consultas", len(df_prontuario))
+if menu == "👤 Clientes":
+    st.header("👤 Cadastro de Proprietário")
     
-    st.subheader("Atendimentos Recentes")
-    st.table(df_prontuario.tail(3))
-
-elif menu == "👤 Clientes & Pets":
-    tab1, tab2 = st.tabs(["👤 Novo Cliente", "🐾 Novo Pet"])
+    # Lista de Clientes já cadastrados
+    if not st.session_state.dt_tutores.empty:
+        st.subheader("Clientes Cadastrados")
+        st.dataframe(st.session_state.dt_tutores, use_container_width=True, hide_index=True)
     
-    with tab1:
-        st.subheader("Cadastro de Proprietário")
-        with st.form("form_tutor", clear_on_submit=True):
-            c1, c2 = st.columns(2)
-            nome = c1.text_input("Nome Completo")
-            cpf = c2.text_input("CPF (Apenas números)")
-            email = c1.text_input("E-mail")
-            whats = c2.text_input("WhatsApp")
-            end = st.text_input("Endereço (Rua, Nº)")
-            c3, c4 = st.columns(2)
-            bairro = c3.text_input("Bairro")
-            cidade = c4.text_input("Cidade")
-            if st.form_submit_button("SALVAR CLIENTE"):
-                if not df_tutores[df_tutores['CPF'] == cpf].empty:
-                    st.error("CPF já cadastrado!")
-                elif nome and cpf:
-                    novo = pd.DataFrame([{"CPF": cpf, "Nome": nome, "Email": email, "WhatsApp": whats, "Endereco": end, "Bairro": bairro, "Cidade": cidade}])
-                    novo.to_csv('tutores_v19.csv', mode='a', header=False, index=False)
-                    st.success("Cliente cadastrado com sucesso!")
-                    st.rerun()
+    st.divider()
+    st.subheader("Novo Cadastro")
+    with st.form("novo_tutor", clear_on_submit=True):
+        c1, c2 = st.columns(2)
+        nome = c1.text_input("Nome Completo*")
+        cpf = c2.text_input("CPF (identificador único)*")
+        email = c1.text_input("E-mail")
+        whats = c2.text_input("WhatsApp com DDD")
+        end = st.text_input("Endereço Completo (Rua, Nº)")
+        c3, c4 = st.columns(2)
+        bairro = c3.text_input("Bairro")
+        cidade = c4.text_input("Cidade")
+        
+        if st.form_submit_button("SALVAR PROPRIETÁRIO"):
+            if nome and cpf:
+                if cpf in st.session_state.dt_tutores['CPF'].values:
+                    st.error("Este CPF já está cadastrado!")
+                else:
+                    novo = pd.DataFrame([{"CPF": cpf, "Nome": nome, "Email": email, "WhatsApp": whats, "Endereço": end, "Bairro": bairro, "Cidade": cidade}])
+                    st.session_state.dt_tutores = pd.concat([st.session_state.dt_tutores, novo], ignore_index=True)
+                    salvar_dados(st.session_state.dt_tutores, ARQ_TUTORES)
+                    st.success(f"Tutor {nome} salvo com sucesso!")
+                    st.rerun() # FORÇA A ATUALIZAÇÃO PARA APARECER NA LISTA DO PET
+            else:
+                st.error("Nome e CPF são obrigatórios!")
 
-    with tab2:
-        st.subheader("Cadastro de Animal")
-        if df_tutores.empty: st.warning("Cadastre um cliente primeiro.")
-        else:
-            with st.form("form_pet"):
-                tutor = st.selectbox("Proprietário:", df_tutores['Nome'] + " (" + df_tutores['CPF'].astype(str) + ")")
-                c1, c2 = st.columns(2)
-                nome_p = c1.text_input("Nome do Pet")
-                esp = c2.selectbox("Espécie", ["Canina", "Felina", "Ave", "Outros"])
-                raca = c1.text_input("Raça")
-                sexo = c2.radio("Sexo", ["Macho", "Fêmea"], horizontal=True)
-                peso = c1.number_input("Peso (kg)", min_value=0.0)
-                if st.form_submit_button("SALVAR PET"):
-                    cpf_vinc = tutor.split("(")[-1].replace(")", "")
-                    novo_p = pd.DataFrame([{"CPF_Tutor": cpf_vinc, "Pet": nome_p, "Especie": esp, "Raca": raca, "Sexo": sexo, "Peso": peso}])
-                    novo_p.to_csv('pets_v19.csv', mode='a', header=False, index=False)
-                    st.success(f"{nome_p} cadastrado!")
-
-elif menu == "⚕️ Atendimento":
-    st.header("⚕️ Prontuário Clínico")
-    if df_pets.empty: st.info("Nenhum pet no sistema.")
+elif menu == "🐾 Animais":
+    st.header("🐾 Cadastro de Animal")
+    
+    if st.session_state.dt_tutores.empty:
+        st.warning("⚠️ Você precisa cadastrar um Cliente antes de cadastrar um animal.")
     else:
-        with st.form("atendimento"):
-            pet_sel = st.selectbox("Selecionar Paciente:", df_pets['Pet'])
-            sintomas = st.text_area("Anamnese / Sintomas")
-            diag = st.text_area("Diagnóstico")
-            presc = st.text_area("Prescrição / Tratamento")
-            if st.form_submit_button("GRAVAR CONSULTA"):
-                data_h = datetime.now().strftime("%d/%m/%Y %H:%M")
-                novo_pr = pd.DataFrame([{"Data": data_h, "Pet": pet_sel, "Sintomas": sintomas, "Diagnostico": diag, "Prescricao": presc}])
-                novo_pr.to_csv('prontuario_v19.csv', mode='a', header=False, index=False)
-                st.success("Prontuário salvo!")
+        with st.form("novo_pet"):
+            # Aqui buscamos a lista de tutores atualizada
+            tutor_opcoes = st.session_state.dt_tutores['Nome'] + " (" + st.session_state.dt_tutores['CPF'] + ")"
+            selecionado = st.selectbox("Selecione o Dono:", tutor_opcoes)
+            
+            st.divider()
+            c1, c2, c3 = st.columns(3)
+            p_nome = c1.text_input("Nome do Pet")
+            p_esp = c2.selectbox("Espécie", ["Canina", "Felina", "Ave", "Exótico"])
+            p_raca = c3.text_input("Raça")
+            
+            c4, c5, c6 = st.columns(3)
+            p_sexo = c4.selectbox("Sexo", ["Macho", "Fêmea"])
+            p_peso = c5.text_input("Peso (kg)")
+            p_idade = c6.text_input("Idade")
+            
+            if st.form_submit_button("VINCULAR ANIMAL AO DONO"):
+                if p_nome:
+                    cpf_vinc = selecionado.split("(")[-1].replace(")", "")
+                    novo_p = pd.DataFrame([{"Dono_CPF": cpf_vinc, "Pet_Nome": p_nome, "Especie": p_esp, "Raca": p_raca, "Sexo": p_sexo, "Peso": p_peso, "Idade": p_idade}])
+                    st.session_state.dt_pets = pd.concat([st.session_state.dt_pets, novo_p], ignore_index=True)
+                    salvar_dados(st.session_state.dt_pets, ARQ_PETS)
+                    st.success(f"{p_nome} vinculado a {selecionado}!")
+                else:
+                    st.error("O nome do animal é obrigatório.")
 
-elif menu == "💰 Financeiro & Estoque":
-    t1, t2, t3 = st.tabs(["🏷️ Catálogo", "🛒 Nova Venda", "🧾 Recibos"])
+    st.subheader("Lista de Animais")
+    st.dataframe(st.session_state.dt_pets, use_container_width=True, hide_index=True)
+
+elif menu == "💰 Financeiro":
+    st.header("💰 Gestão Financeira")
+    t1, t2 = st.tabs(["🏷️ Serviços e Preços", "🧾 Gerar Recibo"])
     
     with t1:
-        st.subheader("Produtos e Serviços")
-        with st.form("add_cat"):
-            tipo = st.selectbox("Tipo", ["Serviço", "Produto"])
-            item = st.text_input("Nome (Ex: Consulta, Vacina V10, Ração)")
-            preco = st.number_input("Preço Sugerido", min_value=0.0)
-            if st.form_submit_button("ADICIONAR AO CATÁLOGO"):
-                pd.DataFrame([{"Tipo": tipo, "Item": item, "Preco": preco}]).to_csv('catalogo_v19.csv', mode='a', header=False, index=False)
-                st.success("Item adicionado!")
-        st.dataframe(df_servicos, use_container_width=True)
-
+        st.subheader("Tabela de Valores")
+        servicos = {
+            "Item": ["Consulta Geral", "Vacina V10", "Vacina Raiva", "Castração Cão", "Castração Gato", "Exame de Sangue"],
+            "Preço": ["R$ 150,00", "R$ 130,00", "R$ 90,00", "R$ 450,00", "R$ 300,00", "R$ 110,00"]
+        }
+        st.table(pd.DataFrame(servicos))
+        
     with t2:
-        st.subheader("Lançar Venda/Atendimento")
-        with st.form("venda"):
-            cli = st.selectbox("Cliente:", df_tutores['Nome'] if not df_tutores.empty else ["Nenhum"])
-            it = st.selectbox("Item:", df_servicos['Item'] if not df_servicos.empty else ["Nenhum"])
-            vlr = st.number_input("Valor Final (R$)", min_value=0.0)
-            if st.form_submit_button("CONFIRMAR PAGAMENTO"):
-                pd.DataFrame([{"Data": datetime.now().strftime("%d/%m/%Y"), "Cliente": cli, "Item": it, "Valor": vlr}]).to_csv('vendas_v19.csv', mode='a', header=False, index=False)
-                st.success("Venda registrada!")
-
-    with t3:
-        st.subheader("Gerador de Recibo")
-        venda_sel = st.selectbox("Selecione a Venda:", df_vendas.index)
-        if not df_vendas.empty:
-            v = df_vendas.iloc[venda_sel]
-            recibo_txt = f"""
-            ------------------------------------------
-            RECIBO DE SERVIÇOS VETERINÁRIOS
-            ------------------------------------------
-            DATA: {v['Data']}
-            CLIENTE: {v['Cliente']}
-            ------------------------------------------
-            DISCRIMINAÇÃO:
-            {v['Item']} ................ R$ {v['Valor']:.2f}
-            ------------------------------------------
-            TOTAL: R$ {v['Valor']:.2f}
+        st.subheader("Emissão de Recibo")
+        if st.session_state.dt_tutores.empty:
+            st.info("Cadastre um cliente para gerar recibos.")
+        else:
+            cli_recibo = st.selectbox("Para quem é o recibo?", st.session_state.dt_tutores['Nome'])
+            serv_recibo = st.text_input("Descrição do Serviço/Produto")
+            valor_recibo = st.text_input("Valor total (R$)")
             
-            Obrigado pela confiança!
-            Ribeira Vet Pro
-            """
-            st.code(recibo_txt)
-            st.button("Imprimir (Simulação)")
-
-elif menu == "🤝 Relacionamento":
-    st.header("🤝 Espaço do Cliente (CRM)")
-    st.info("Aqui você monitora a frequência dos seus clientes.")
-    if not df_vendas.empty:
-        rank = df_vendas.groupby('Cliente')['Valor'].sum().sort_values(ascending=False)
-        st.subheader("Top Clientes (por Investimento)")
-        st.bar_chart(rank)
-    else:
-        st.write("Dados insuficientes para gerar análise.")
+            if st.button("GERAR TEXTO DO RECIBO"):
+                data_atual = datetime.now().strftime("%d/%m/%Y")
+                recibo_final = f"""
+                ==========================================
+                RECIBO - RIBEIRA VET PRO
+                ==========================================
+                DATA: {data_atual}
+                CLIENTE: {cli_recibo}
+                
+                REFERENTE A: {serv_recibo}
+                VALOR TOTAL: R$ {valor_recibo}
+                
+                ------------------------------------------
+                Assinatura do Responsável
+                """
+                st.code(recibo_final)
+                st.info("Copie o texto acima e envie via WhatsApp.")
